@@ -1,0 +1,4 @@
+{
+  "extends": "./skills/engineering/skill-eng-performance/tsconfig.json"
+}
+

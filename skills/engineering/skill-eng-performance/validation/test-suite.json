@@ -1,0 +1,855 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "skill-eng-performance",
+  "version": "1.0.0",
+  "description": "Validation test suite for all 14 performance rules (PERF01–PERF14). Covers violation detection, safe implementations that must not trigger findings, not-applicable contexts, insufficient-evidence cases, and duplicate-finding consolidation.",
+  "testCases": [
+
+    {
+      "id": "TC-001",
+      "description": "N+1 query pattern: loop over orders issuing one SELECT per item via SQLAlchemy lazy loading. Unbounded collection, user-facing endpoint.",
+      "ruleIds": ["PERF02"],
+      "technology": "Python/SQLAlchemy",
+      "inputFile": "validation/test-data/TC-001-n-plus-one.py",
+      "targetFunction": "get_orders_with_items",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF02",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["loop", "items", "lazy"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "get_orders_with_items_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "selectinload() eager-loads items in 2 queries; no N+1 pattern."
+        }
+      }
+    },
+
+    {
+      "id": "TC-002",
+      "description": "Blocking synchronous I/O inside async function: requests.get() and time.sleep() in async handlers. Both block the event loop.",
+      "ruleIds": ["PERF01"],
+      "technology": "Python/asyncio",
+      "inputFile": "validation/test-data/TC-002-blocking-io.py",
+      "targetFunction": "fetch_user_profile_blocking",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF01",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["requests.get", "async", "blocking"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "fetch_user_profile_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "httpx.AsyncClient with await — non-blocking."
+        }
+      },
+      "notApplicableCase": {
+        "targetFunction": "cli_export_report",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "CLI script — blocking I/O outside async context is acceptable. PERF01 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-003a",
+      "description": "Unbounded CSV export: all log entries read into memory with .all() then materialized as bytes. Can OOM on millions of rows.",
+      "ruleIds": ["PERF03"],
+      "technology": "Python/SQLAlchemy",
+      "inputFile": "validation/test-data/TC-003-resource-usage.py",
+      "targetFunction": "export_logs_to_csv_buffered",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF03",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": [".all()", "memory", "unbounded"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "export_logs_to_csv_streaming",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "yield_per(1000) streams rows in batches — bounded memory usage."
+        }
+      }
+    },
+
+    {
+      "id": "TC-003b",
+      "description": "Missing resource disposal: file handle opened without context manager, never closed. File descriptor leak.",
+      "ruleIds": ["PERF03"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-003-resource-usage.py",
+      "targetFunction": "read_config_no_close",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF03",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["open(", "no context manager", "close"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "notApplicableCase": {
+        "targetFunction": "load_app_config",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Small bounded config file (< 4 KB) read with context manager. PERF03 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-004a",
+      "description": "HTTP call with no timeout configured. External payment gateway — if it stalls, the handler hangs indefinitely.",
+      "ruleIds": ["PERF05"],
+      "technology": "Python/httpx",
+      "inputFile": "validation/test-data/TC-004-timeout-handling.py",
+      "targetFunction": "fetch_payment_status_no_timeout",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF05",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["timeout", "missing", "AsyncClient"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "fetch_payment_status_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "timeout=5.0 explicitly set. PERF05 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-004b",
+      "description": "Retry logic with no maximum attempt count. Infinite retries on a permanently failed service amplify load.",
+      "ruleIds": ["PERF05"],
+      "technology": "Python/tenacity",
+      "inputFile": "validation/test-data/TC-004-timeout-handling.py",
+      "targetFunction": "call_flaky_service",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF05",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["retry", "no stop", "max_retries"],
+            "scoreImpact": -7
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "TC-005a",
+      "description": "Full unbounded history + 3,000-token static doc injected on every LLM call. Will cause context-window overflow after ~10 turns.",
+      "ruleIds": ["PERF06"],
+      "technology": "Python/OpenAI",
+      "inputFile": "validation/test-data/TC-005-context-efficiency.py",
+      "targetFunction": "chat_with_full_history",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF06",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["full history", "static document", "unbounded"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "chat_with_trimmed_history",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Rolling window trim keeps history within token budget."
+        }
+      }
+    },
+
+    {
+      "id": "TC-005b",
+      "description": "Per-item LLM calls in a loop: 200 products → 200 API calls. A single batch prompt would suffice.",
+      "ruleIds": ["PERF06"],
+      "technology": "Python/OpenAI",
+      "inputFile": "validation/test-data/TC-005-context-efficiency.py",
+      "targetFunction": "classify_products_loop",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF06",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["loop", "per-item", "LLM call"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "notApplicableCase": {
+        "targetFunction": "short_chat_full_history",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "3 messages in history — well within token budget. PERF06 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-006a",
+      "description": "Sequential awaits on three independent HTTP calls (inventory, pricing, reviews). Total latency = sum; could be max.",
+      "ruleIds": ["PERF07"],
+      "technology": "Python/asyncio",
+      "inputFile": "validation/test-data/TC-006-concurrency.py",
+      "targetFunction": "fetch_product_data_sequential",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF07",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["sequential", "await", "independent"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "fetch_product_data_parallel",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "asyncio.gather runs all three calls in parallel. PERF07 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-006b",
+      "description": "Unbounded asyncio.gather fan-out: 10,000 user IDs, no semaphore. Can exhaust OS file descriptors and connection pool.",
+      "ruleIds": ["PERF07"],
+      "technology": "Python/asyncio",
+      "inputFile": "validation/test-data/TC-006-concurrency.py",
+      "targetFunction": "fetch_all_users_parallel_unbounded",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF07",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["unbounded", "gather", "semaphore"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "fetch_all_users_parallel_bounded",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "asyncio.Semaphore(20) bounds concurrency. PERF07 must not fire."
+        }
+      },
+      "notApplicableCase": {
+        "targetFunction": "create_and_notify_user",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Data dependency: notify requires the user ID from create. Sequential is correct. PERF07 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-007a",
+      "description": "Regex compiled on every function call at 500 RPS. Should be a module-level constant.",
+      "ruleIds": ["PERF08"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-007-redundant-calls.py",
+      "targetFunction": "extract_emails_from_text_slow",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF08",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["re.compile", "per call", "hot path"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "extract_emails_from_text_fast",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Module-level _EMAIL_PATTERN compiled once. PERF08 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-007b",
+      "description": "Same user profile API called twice within one request. Second call uses the same resource already fetched.",
+      "ruleIds": ["PERF08"],
+      "technology": "Python/httpx",
+      "inputFile": "validation/test-data/TC-007-redundant-calls.py",
+      "targetFunction": "get_user_dashboard",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF08",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["duplicate", "same endpoint", "identical call"],
+            "scoreImpact": -7
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "TC-008a",
+      "description": "SQL: Unindexed WHERE clause on users.status on a large table. Full sequential scan inferred from missing index.",
+      "ruleIds": ["PERF09"],
+      "technology": "PostgreSQL",
+      "inputFile": "validation/test-data/TC-008-database-indexing.sql",
+      "targetQuery": "VIOLATION 1",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF09",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["status", "no index", "sequential scan"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "description": "CREATE INDEX CONCURRENTLY idx_users_status + projected SELECT",
+        "expected": {
+          "findingsPresent": false
+        }
+      }
+    },
+
+    {
+      "id": "TC-008b",
+      "description": "SQL: LOWER() applied to email column prevents B-tree index use. Function-wrapped column filter.",
+      "ruleIds": ["PERF09"],
+      "technology": "PostgreSQL",
+      "inputFile": "validation/test-data/TC-008-database-indexing.sql",
+      "targetQuery": "VIOLATION 2",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF09",
+            "severity": "medium",
+            "confidence": "medium",
+            "evidenceContains": ["LOWER(", "function on column", "index"],
+            "scoreImpact": -5
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "TC-008c",
+      "description": "SQL: SELECT * on large table — over-fetches columns not needed by caller.",
+      "ruleIds": ["PERF09"],
+      "technology": "PostgreSQL",
+      "inputFile": "validation/test-data/TC-008-database-indexing.sql",
+      "targetQuery": "VIOLATION 5",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF09",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["SELECT *", "over-fetch"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "notApplicableCase": {
+        "description": "countries table: 250 rows — full scan acceptable, no index required",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Small lookup table. PERF09 must not be flagged."
+        }
+      }
+    },
+
+    {
+      "id": "TC-009a",
+      "description": "FastAPI endpoint returns all Product rows with no LIMIT. Production catalog can reach 500,000 items.",
+      "ruleIds": ["PERF10"],
+      "technology": "Python/FastAPI/SQLAlchemy",
+      "inputFile": "validation/test-data/TC-009-pagination.py",
+      "targetFunction": "list_products_no_pagination",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF10",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["no LIMIT", "unbounded", ".all()"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "list_products_cursor",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Cursor pagination + hard page_size cap of 100. PERF10 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-009b",
+      "description": "OFFSET pagination: page_size allows up to 1,000 rows; deep offsets scan millions of rows.",
+      "ruleIds": ["PERF10"],
+      "technology": "Python/FastAPI/SQLAlchemy",
+      "inputFile": "validation/test-data/TC-009-pagination.py",
+      "targetFunction": "list_products_offset",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF10",
+            "severity": "medium",
+            "confidence": "medium",
+            "evidenceContains": ["OFFSET", "large page size", "1000"],
+            "scoreImpact": -5
+          }
+        ]
+      },
+      "notApplicableCase": {
+        "targetFunction": "export_all_products",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Intentional full-export endpoint with streaming. PERF10 must not flag absent pagination."
+        }
+      }
+    },
+
+    {
+      "id": "TC-010a",
+      "description": "React: unvirtualized list rendering up to 50,000 product DOM nodes, causing UI freeze.",
+      "ruleIds": ["PERF11"],
+      "technology": "React/TypeScript",
+      "inputFile": "validation/test-data/TC-010-react-rendering.tsx",
+      "targetComponent": "ProductListViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF11",
+            "severity": "high",
+            "confidence": "medium",
+            "evidenceContains": ["large list", "no virtualization", "50,000"],
+            "scoreImpact": -11
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "ProductListSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "react-window FixedSizeList renders only visible rows."
+        }
+      }
+    },
+
+    {
+      "id": "TC-010b",
+      "description": "React: inline object literal in useEffect dependency array causes the effect to fire on every render.",
+      "ruleIds": ["PERF11"],
+      "technology": "React/TypeScript",
+      "inputFile": "validation/test-data/TC-010-react-rendering.tsx",
+      "targetComponent": "FilterPanelViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF11",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["inline object", "dependency array", "new reference"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "notApplicableCase": {
+        "targetComponent": "NavigationMenu",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "3 hardcoded nav items — no virtualization or memoization needed."
+        }
+      }
+    },
+
+    {
+      "id": "TC-011a",
+      "description": "React: pdfjs-dist (~800 KB) imported eagerly in App-level module — adds to critical bundle.",
+      "ruleIds": ["PERF12"],
+      "technology": "React/TypeScript/Vite",
+      "inputFile": "validation/test-data/TC-011-module-delivery.tsx",
+      "targetImport": "import * as pdfjsLib from 'pdfjs-dist'",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF12",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["pdfjs-dist", "critical bundle", "lazy"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "PdfViewerSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "React.lazy + dynamic import splits PDF viewer into a separate chunk."
+        }
+      }
+    },
+
+    {
+      "id": "TC-011b",
+      "description": "React: wildcard lodash-es import may prevent tree-shaking depending on bundler config.",
+      "ruleIds": ["PERF12"],
+      "technology": "React/TypeScript/Vite",
+      "inputFile": "validation/test-data/TC-011-module-delivery.tsx",
+      "targetImport": "import * as _ from 'lodash-es'",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF12",
+            "severity": "medium",
+            "confidence": "medium",
+            "evidenceContains": ["wildcard import", "tree-shaking", "lodash-es"],
+            "scoreImpact": -5
+          }
+        ]
+      },
+      "notApplicableCase": {
+        "targetImport": "import { format } from 'date-fns'",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Named import from a small (2 KB) utility. PERF12 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-012a",
+      "description": "React: <img> without width/height causes layout shift (CLS). PNG format when WebP/AVIF available.",
+      "ruleIds": ["PERF13"],
+      "technology": "React/TypeScript",
+      "inputFile": "validation/test-data/TC-012-asset-network.tsx",
+      "targetComponent": "HeroSectionViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF13",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["missing dimensions", "CLS", "layout shift"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "HeroSectionSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Explicit width/height and <picture> with WebP/AVIF sources."
+        }
+      },
+      "notApplicableCase": {
+        "targetComponent": "CloseIcon",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "16×16 SVG icon — format optimization not required. PERF13 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-012b",
+      "description": "CSS: @font-face without font-display: swap causes FOIT on slow connections.",
+      "ruleIds": ["PERF13"],
+      "technology": "React/TypeScript/CSS",
+      "inputFile": "validation/test-data/TC-012-asset-network.tsx",
+      "targetComponent": "FontViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF13",
+            "severity": "low",
+            "confidence": "high",
+            "evidenceContains": ["font-display", "FOIT", "blocking font"],
+            "scoreImpact": -2
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "FontSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "font-display: swap prevents FOIT."
+        }
+      }
+    },
+
+    {
+      "id": "TC-013a",
+      "description": "Redux: component subscribes to entire catalog slice but only uses catalog.products.length — causes unnecessary re-renders.",
+      "ruleIds": ["PERF14"],
+      "technology": "React/TypeScript/Redux Toolkit",
+      "inputFile": "validation/test-data/TC-013-state-updates.tsx",
+      "targetComponent": "ProductCountBadgeViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF14",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["broad subscription", "entire slice", "unnecessary re-render"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "ProductCountBadgeSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Fine-grained selector for products.length only."
+        }
+      }
+    },
+
+    {
+      "id": "TC-013b",
+      "description": "Redux selector returns new array reference on every call, defeating memoization of dependent components.",
+      "ruleIds": ["PERF14"],
+      "technology": "React/TypeScript/Redux Toolkit",
+      "inputFile": "validation/test-data/TC-013-state-updates.tsx",
+      "targetComponent": "FilteredProductListViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF14",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["new reference", "selector", "memoization"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "FilteredProductListSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "createSelector (reselect) memoizes result — stable reference."
+        }
+      },
+      "notApplicableCase": {
+        "targetComponent": "SimpleGreeting",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "String concatenation is negligibly cheap — useMemo not needed. PERF14 must not fire."
+        }
+      }
+    },
+
+    {
+      "id": "TC-013c",
+      "description": "Search bar: setState + API call on every keystroke without debouncing. Up to 10 API calls/second during fast typing.",
+      "ruleIds": ["PERF14"],
+      "technology": "React/TypeScript",
+      "inputFile": "validation/test-data/TC-013-state-updates.tsx",
+      "targetComponent": "SearchBarViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF14",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["no debounce", "every keystroke", "API call"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "SearchBarSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "useDebounce(300) fires API call only after 300ms inactivity."
+        }
+      }
+    },
+
+    {
+      "id": "TC-014",
+      "description": "SAFE IMPLEMENTATION: Well-implemented backend combining PERF04 (cache + TTL + invalidation), PERF05 (timeout + bounded retry), PERF07 (semaphore-bounded fan-out). No findings expected.",
+      "ruleIds": ["PERF04", "PERF05", "PERF07"],
+      "technology": "Python/FastAPI/Redis/asyncio",
+      "inputFile": "validation/test-data/TC-014-efficient-backend.py",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "All patterns are correctly implemented. Reviewer must produce zero findings."
+      }
+    },
+
+    {
+      "id": "TC-015",
+      "description": "SAFE IMPLEMENTATION: Well-implemented React dashboard combining PERF11 (virtualized list), PERF12 (lazy chart), PERF14 (fine-grained selector, debounced search, memoized context). No findings expected.",
+      "ruleIds": ["PERF11", "PERF12", "PERF14"],
+      "technology": "React/TypeScript/Redux Toolkit",
+      "inputFile": "validation/test-data/TC-015-efficient-react.tsx",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "All patterns are correctly implemented. Reviewer must produce zero findings."
+      }
+    },
+
+    {
+      "id": "TC-016",
+      "description": "INSUFFICIENT EVIDENCE: Caching check on an endpoint where query cost and call frequency are not visible in the diff. Expected: uncertainty_note, no finding.",
+      "ruleIds": ["PERF04"],
+      "technology": "Python/FastAPI",
+      "inputFile": null,
+      "syntheticCode": "async def get_user_preferences(user_id: int, db: Session): return db.query(UserPreference).filter_by(user_id=user_id).first()",
+      "expected": {
+        "findingsPresent": false,
+        "uncertaintyNote": true,
+        "uncertaintyContains": ["call frequency", "query cost", "caching benefit"],
+        "notes": "Cannot determine if caching is warranted without knowing call frequency or query cost. Must produce uncertainty_note, not a finding."
+      }
+    },
+
+    {
+      "id": "TC-017",
+      "description": "DUPLICATE FINDING CONSOLIDATION: N+1 query (PERF02) also reads all columns (PERF09) from an unbounded result (PERF10). Single root cause — must produce exactly one finding.",
+      "ruleIds": ["PERF02", "PERF09", "PERF10"],
+      "technology": "Python/SQLAlchemy",
+      "inputFile": null,
+      "syntheticCode": "orders = db.query(Order).all()\nfor order in orders:\n    items = order.items  # lazy load\n    details = order.customer  # SELECT * implicitly",
+      "expected": {
+        "findingsPresent": true,
+        "maxFindingCount": 1,
+        "primaryRuleId": "PERF02",
+        "notes": "Root cause is the N+1 loop. SELECT * and unbounded result are secondary manifestations. Consolidate into one PERF02 finding. Must not produce three separate score deductions."
+      }
+    },
+
+    {
+      "id": "TC-018",
+      "description": "MULTI-RULE INDEPENDENT ISSUES: File with two genuinely independent violations — PERF01 (blocking I/O) and PERF05 (missing timeout). Each must be reported as a separate finding.",
+      "ruleIds": ["PERF01", "PERF05"],
+      "technology": "Python/asyncio/httpx",
+      "inputFile": null,
+      "syntheticCode": "async def process(user_id: int):\n    time.sleep(1)  # PERF01 violation\n    async with httpx.AsyncClient() as client:  # no timeout: PERF05 violation\n        return await client.get(f'/users/{user_id}')",
+      "expected": {
+        "findingsPresent": true,
+        "minFindingCount": 2,
+        "findingRuleIds": ["PERF01", "PERF05"],
+        "notes": "Two independent violations — blocking sleep and missing timeout. Both must be reported. Total deduction = -15 (PERF05/high) + -15 (PERF01/high) = -30."
+      }
+    },
+
+    {
+      "id": "TC-019",
+      "description": "PERF04 VIOLATION: Hot-path product lookup hits the database on every request with no caching. Endpoint called at ~500 RPS. Cache entries for mutable product data also have no TTL.",
+      "ruleIds": ["PERF04"],
+      "technology": "Python/FastAPI/SQLAlchemy",
+      "inputFile": null,
+      "syntheticCode": "async def get_product(product_id: int, db: Session):\n    # Called 500 times/second — no cache; hits DB every time\n    return db.query(Product).filter_by(id=product_id).first()\n\n# Also: cache with no TTL on mutable data:\n# redis.set('product:1', json.dumps(product))  # no expiry",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "PERF04",
+            "severity": "high",
+            "confidence": "medium",
+            "evidenceContains": ["no cache", "hot path", "repeated DB query"],
+            "scoreImpact": -11
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "description": "Same endpoint with Redis cache (TTL=300s) and invalidation on product update — matches TC-014-efficient-backend.py pattern",
+        "inputFile": "validation/test-data/TC-014-efficient-backend.py",
+        "targetFunction": "get_product_stock",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Cache with TTL and invalidation on write. PERF04 must not fire."
+        }
+      }
+    }
+
+  ],
+  "coverage": {
+    "rulesWithViolationTest": ["PERF01","PERF02","PERF03","PERF04","PERF05","PERF06","PERF07","PERF08","PERF09","PERF10","PERF11","PERF12","PERF13","PERF14"],
+    "rulesWithSafeCounterpart": ["PERF01","PERF02","PERF03","PERF04","PERF05","PERF06","PERF07","PERF08","PERF09","PERF10","PERF11","PERF12","PERF13","PERF14"],
+    "rulesWithNotApplicableCase": ["PERF01","PERF03","PERF06","PERF07","PERF09","PERF10","PERF11","PERF12","PERF13","PERF14"],
+    "technologiesCovered": ["Python","SQLAlchemy","FastAPI","PostgreSQL","asyncio","httpx","tenacity","OpenAI","Redis","React","TypeScript","Redux Toolkit","Zustand","Vite","Next.js","CSS"],
+    "totalTestCases": 23,
+    "violationCases": 19,
+    "safeCases": 15,
+    "notApplicableCases": 10,
+    "insufficientEvidenceCases": 1,
+    "duplicateFindingConsolidationCases": 1,
+    "independentMultiRuleCases": 1
+  }
+}
