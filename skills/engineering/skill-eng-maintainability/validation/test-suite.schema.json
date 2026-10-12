@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://code-review-portal.internal/schemas/test-suite/v1",
+  "title": "TestSuite",
+  "description": "Schema for Code Review Portal maintainability skill validation test suites",
+  "type": "object",
+  "required": ["suite", "version", "description", "testCases", "coverage"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URI of the JSON schema"
+    },
+    "suite": {
+      "type": "string",
+      "description": "Identifier of the test suite"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the test suite"
+    },
+    "description": {
+      "type": "string",
+      "description": "Summary of the test suite purpose and scope"
+    },
+    "testCases": {
+      "type": "array",
+      "description": "List of validation test cases",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "ruleIds", "technology", "expected"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^TC-\\d+[a-z]?$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "ruleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^MAINT(0[1-9]|1[0-4])$"
+            }
+          },
+          "technology": {
+            "type": "string"
+          },
+          "inputFile": {
+            "type": ["string", "null"]
+          },
+          "targetFunction": {
+            "type": "string"
+          },
+          "targetComponent": {
+            "type": "string"
+          },
+          "targetClass": {
+            "type": "string"
+          },
+          "targetImport": {
+            "type": "string"
+          },
+          "targetQuery": {
+            "type": "string"
+          },
+          "syntheticCode": {
+            "type": "string"
+          },
+          "expected": {
+            "type": "object",
+            "required": ["findingsPresent"],
+            "properties": {
+              "findingsPresent": {
+                "type": "boolean"
+              },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["ruleId", "severity", "confidence"],
+                  "properties": {
+                    "ruleId": {
+                      "type": "string",
+                      "pattern": "^MAINT(0[1-9]|1[0-4])$"
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": ["critical", "high", "medium", "low"]
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": ["high", "medium", "low"]
+                    },
+                    "evidenceContains": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "scoreImpact": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "notes": {
+                "type": "string"
+              },
+              "uncertaintyNote": {
+                "type": "boolean"
+              },
+              "uncertaintyContains": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "maxFindingCount": {
+                "type": "integer"
+              },
+              "minFindingCount": {
+                "type": "integer"
+              },
+              "primaryRuleId": {
+                "type": "string"
+              },
+              "findingRuleIds": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "safeCounterpart": {
+            "type": "object"
+          },
+          "notApplicableCase": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "rulesWithViolationTest",
+        "rulesWithSafeCounterpart",
+        "rulesWithNotApplicableCase",
+        "technologiesCovered",
+        "totalTestCases",
+        "violationCases",
+        "safeCases"
+      ]
+    }
+  }
+}
+

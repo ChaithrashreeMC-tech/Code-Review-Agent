@@ -1,0 +1,550 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "skill-eng-maintainability",
+  "version": "1.0.0",
+  "description": "Validation test suite for all 14 maintainability rules (MAINT01–MAINT14). Covers violation detection, safe implementations, false-positive resistance, multi-stack examples, insufficient evidence, and root-cause duplicate consolidation.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "MAINT01: Duplicated discount calculation and tax logic copied verbatim across domestic and commercial invoice handlers.",
+      "ruleIds": ["MAINT01"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-001-duplication.py",
+      "targetFunction": "calculate_invoice_total_domestic",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT01",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["discount", "tier", "tax", "duplicated"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_invoice_total_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Shared apply_customer_discount helper encapsulates calculation."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "MAINT02: Deeply nested conditionals (5 levels) in process_loan_application_complex obscuring business validation.",
+      "ruleIds": ["MAINT02"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-002-complexity.py",
+      "targetFunction": "process_loan_application_complex",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT02",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["nested", "conditionals", "complexity"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "process_loan_application_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Flattened logic with guard clauses and early returns."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "MAINT03: Ambiguous cryptic identifiers (proc_usr_lst, d, temp1, not_unverified) obscuring business domain purpose.",
+      "ruleIds": ["MAINT03"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-003-naming.py",
+      "targetFunction": "proc_usr_lst",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT03",
+            "severity": "low",
+            "confidence": "high",
+            "evidenceContains": ["proc_usr_lst", "single-letter", "not_unverified"],
+            "scoreImpact": -2
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "filter_verified_high_value_accounts",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Expressive domain-oriented naming clearly states intent."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "MAINT04: God-method performing 5 distinct responsibilities (parsing, validation, payment, DB, email dispatch) with flag parameter.",
+      "ruleIds": ["MAINT04"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-004-function-responsibility.py",
+      "targetFunction": "process_checkout_god_method",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT04",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["multiple responsibilities", "parsing", "payment", "database"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "process_checkout_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Decomposed into focused functions with single responsibilities."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "MAINT05: Hardcoded instantiation of concrete PostgresClient and StripeApiClient inside business service constructor.",
+      "ruleIds": ["MAINT05"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-005-coupling.py",
+      "targetClass": "BillingProcessorViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT05",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["PostgresClient", "StripeApiClient", "direct instantiation"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetClass": "BillingProcessorSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Dependencies injected as protocols/abstractions."
+        }
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "MAINT06: Low-cohesion omnibus class AppOmnibusManager grouping auth, inventory, PDF rendering, and marketing newsletters.",
+      "ruleIds": ["MAINT06"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-006-cohesion.py",
+      "targetClass": "AppOmnibusManager",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT06",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["omnibus", "unrelated domains", "low cohesion"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetClass": "InventoryService",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Cohesive single-purpose domain classes."
+        }
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "MAINT07: Generic exception swallowed completely with bare pass block, concealing database/network failure.",
+      "ruleIds": ["MAINT07"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-007-error-handling.py",
+      "targetFunction": "execute_transfer_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT07",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["swallowed exception", "bare except", "conceals failure"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "execute_transfer_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Explicit exception chaining using 'from err' and diagnostic logging."
+        }
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "MAINT08: Scattered magic numbers (86400, 604800, 3600) and direct os.environ reads deep in business calculation.",
+      "ruleIds": ["MAINT08"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-008-configuration.py",
+      "targetFunction": "calculate_user_session_expiry_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT08",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["magic numbers", "86400", "os.environ"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_user_session_expiry_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Named constants and centralized typed settings dataclass."
+        }
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "MAINT09: Direct call to datetime.now() inside domain expiration logic preventing deterministic unit testing.",
+      "ruleIds": ["MAINT09"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-009-testability.py",
+      "targetClass": "TrialSubscriptionViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT09",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["datetime.now", "system clock", "unmockable"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetClass": "TrialSubscriptionSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Injected clock provider callable enabling deterministic tests."
+        }
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "MAINT10: Speculative over-engineering: 4 layers of trivial proxy and factory wrappers for a basic 3-line string helper.",
+      "ruleIds": ["MAINT10"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-010-abstraction.py",
+      "targetFunction": "fetch_data_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT10",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["over-engineering", "speculative indirection", "passthrough"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "fetch_system_tags_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Pragmatic, straightforward function without needless layers."
+        }
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "MAINT11: Unreachable code following unconditional return and large commented-out historical calculation block.",
+      "ruleIds": ["MAINT11"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-dead-code.py",
+      "targetFunction": "calculate_tax_with_dead_code",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT11",
+            "severity": "low",
+            "confidence": "high",
+            "evidenceContains": ["unreachable", "commented-out", "dead code"],
+            "scoreImpact": -2
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_tax_clean",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Clean code with zero dead or commented-out blocks."
+        }
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "MAINT12: Misleading docstring on complex security token parser that fails to document bit-shift parity requirements.",
+      "ruleIds": ["MAINT12"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-012-documentation.py",
+      "targetFunction": "parse_security_manifest",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT12",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["misleading docstring", "undocumented bit-shift", "contract"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "parse_security_manifest_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Accurate, structured docstring documenting parameters, format, and parity spec."
+        }
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "SAFE CODE: Cohesive CustomerService with clear naming, low complexity, and testable design.",
+      "ruleIds": ["MAINT01", "MAINT02", "MAINT03", "MAINT04", "MAINT05", "MAINT06"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-013-safe-code.py",
+      "targetClass": "CustomerService",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "High-quality maintainable implementation; no findings should fire."
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": ".NET MAINT05/MAINT14: Captive dependency where Singleton cache service holds reference to Scoped tenant context.",
+      "ruleIds": ["MAINT05", "MAINT14"],
+      "technology": ".NET/C#",
+      "inputFile": "validation/test-data/TC-014-dotnet-maintainability.cs",
+      "targetClass": "GlobalCacheServiceViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT14",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["captive dependency", "Scoped", "Singleton"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetClass": "GlobalCacheServiceSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Singleton service injects factory/provider to resolve tenant context dynamically."
+        }
+      }
+    },
+    {
+      "id": "TC-015",
+      "description": "REACT MAINT13/MAINT14: Monolithic React component mixing data fetching, form state, and presentation in 80 lines without hooks.",
+      "ruleIds": ["MAINT13", "MAINT14"],
+      "technology": "React/TypeScript",
+      "inputFile": "validation/test-data/TC-015-react-maintainability.tsx",
+      "targetComponent": "UserManagementDashboardViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT14",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["monolithic component", "custom hook", "data fetching"],
+            "scoreImpact": -7
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetComponent": "UserManagementDashboardSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Separates data fetching into useUserDirectory custom hook."
+        }
+      }
+    },
+    {
+      "id": "TC-016",
+      "description": "SQL MAINT04/MAINT14: Monolithic stored procedure combining inventory, billing, PDF logging, notifications, and auditing.",
+      "ruleIds": ["MAINT04", "MAINT14"],
+      "technology": "PostgreSQL",
+      "inputFile": "validation/test-data/TC-016-sql-maintainability.sql",
+      "targetQuery": "sp_omnibus_checkout_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT04",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["omnibus procedure", "inventory", "invoices", "notifications"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetQuery": "sp_deduct_inventory_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Modular single-responsibility stored procedures."
+        }
+      }
+    },
+    {
+      "id": "TC-017",
+      "description": "MAINT13: Shotgun surgery risk where adding a payment method requires updating 8 separate type switches across disparate files.",
+      "ruleIds": ["MAINT13"],
+      "technology": "Python",
+      "inputFile": null,
+      "syntheticCode": "def handle_p(t, a):\n    if t == 'CARD': pay_card(a)\n    elif t == 'WIRE': pay_wire(a)\n    elif t == 'CRYPTO': pay_crypto(a)",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MAINT13",
+            "severity": "medium",
+            "confidence": "medium",
+            "evidenceContains": ["type check", "shotgun surgery", "polymorphism"],
+            "scoreImpact": -5
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-018",
+      "description": "INSUFFICIENT EVIDENCE: Speculative claim that a 20-line class might become bloated in the future without code evidence.",
+      "ruleIds": ["MAINT06"],
+      "technology": "Python",
+      "inputFile": null,
+      "syntheticCode": "class OrderSummary:\n    def __init__(self, id, total):\n        self.id = id\n        self.total = total",
+      "expected": {
+        "findingsPresent": false,
+        "uncertaintyNote": true,
+        "uncertaintyContains": ["speculative", "insufficient evidence", "maintainability"],
+        "notes": "Cannot report MAINT06 without demonstrable lack of cohesion. Record uncertainty_note instead."
+      }
+    },
+    {
+      "id": "TC-019",
+      "description": "DUPLICATE FINDING CONSOLIDATION: God class (MAINT06) also has a long method (MAINT04) and scattered literals (MAINT08). Consolidate into single MAINT06 finding.",
+      "ruleIds": ["MAINT04", "MAINT06", "MAINT08"],
+      "technology": "Python",
+      "inputFile": null,
+      "syntheticCode": "class GiantGodService:\n    # 300 lines combining auth, billing, reporting\n    def do_all(self): pass",
+      "expected": {
+        "findingsPresent": true,
+        "maxFindingCount": 1,
+        "primaryRuleId": "MAINT06",
+        "notes": "Single root cause is the God class design. Consolidate into one finding."
+      }
+    },
+    {
+      "id": "TC-020",
+      "description": "MULTI-RULE INDEPENDENT ISSUES: File containing two independent maintainability defects: swallowed exception (MAINT07) and dead unreachable code (MAINT11).",
+      "ruleIds": ["MAINT07", "MAINT11"],
+      "technology": "Python",
+      "inputFile": null,
+      "syntheticCode": "def run():\n    try: fail()\n    except Exception: pass\n    return 42\n    print('dead')",
+      "expected": {
+        "findingsPresent": true,
+        "minFindingCount": 2,
+        "findingRuleIds": ["MAINT07", "MAINT11"],
+        "notes": "Both independent defects must be reported."
+      }
+    }
+  ],
+  "coverage": {
+    "rulesWithViolationTest": [
+      "MAINT01",
+      "MAINT02",
+      "MAINT03",
+      "MAINT04",
+      "MAINT05",
+      "MAINT06",
+      "MAINT07",
+      "MAINT08",
+      "MAINT09",
+      "MAINT10",
+      "MAINT11",
+      "MAINT12",
+      "MAINT13",
+      "MAINT14"
+    ],
+    "rulesWithSafeCounterpart": [
+      "MAINT01",
+      "MAINT02",
+      "MAINT03",
+      "MAINT04",
+      "MAINT05",
+      "MAINT06",
+      "MAINT07",
+      "MAINT08",
+      "MAINT09",
+      "MAINT10",
+      "MAINT11",
+      "MAINT12",
+      "MAINT13",
+      "MAINT14"
+    ],
+    "rulesWithNotApplicableCase": [
+      "MAINT01",
+      "MAINT02",
+      "MAINT03",
+      "MAINT04",
+      "MAINT05",
+      "MAINT06",
+      "MAINT07",
+      "MAINT08",
+      "MAINT09",
+      "MAINT10",
+      "MAINT11",
+      "MAINT12",
+      "MAINT13",
+      "MAINT14"
+    ],
+    "technologiesCovered": [
+      "Python",
+      ".NET/C#",
+      "React/TypeScript",
+      "PostgreSQL",
+      "SQL",
+      "Java",
+      "AI-Agent"
+    ],
+    "totalTestCases": 20,
+    "violationCases": 16,
+    "safeCases": 15
+  }
+}
+
