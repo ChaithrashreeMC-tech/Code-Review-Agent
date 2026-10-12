@@ -1,0 +1,343 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "skill-eng-modularity",
+  "version": "1.0.0",
+  "description": "Validation test suite for all 12 modularity rules (MOD01–MOD12). Covers violation detection, safe implementations, not-applicable contexts, and boundary conditions.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Single manager class combining user profile, payment processing, and email formatting.",
+      "ruleIds": ["MOD01"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-002-cohesion-srp.py",
+      "targetFunction": "UserManagerViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD01",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["profile", "payment", "email"],
+            "scoreImpact": -8
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "UserProfileService",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Distinct focused classes per domain concern."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "High-level domain module importing concrete I/O details across layer boundary.",
+      "ruleIds": ["MOD02"],
+      "technology": "Python/Flask",
+      "inputFile": "validation/test-data/TC-001-layer-separation.py",
+      "targetFunction": "handle_get_user_orders_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD02",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["sqlite3", "SELECT"],
+            "scoreImpact": -10
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "handle_get_user_orders_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Domain logic relies on repository abstraction."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Cross-domain private import reaching into internal helper of another domain.",
+      "ruleIds": ["MOD03"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-domain-boundaries.py",
+      "targetFunction": "get_user_internal_discount_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD03",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["internal", "private", "boundary"],
+            "scoreImpact": -8
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "get_user_internal_discount_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Imports exclusively from domain's public facade API."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Hardcoded global Stripe SDK client created at module import scope.",
+      "ruleIds": ["MOD04"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-003-coupling-di.py",
+      "targetFunction": "CheckoutServiceViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD04",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["ConcreteStripeClient", "hardcoded"],
+            "scoreImpact": -8
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "CheckoutServiceSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Injects client abstraction via constructor."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "God object class with excessive direct dependencies controlling system lifecycles.",
+      "ruleIds": ["MOD05"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-007-god-object.py",
+      "targetFunction": "SystemGodObjectViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD05",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["God object", "handle_everything"],
+            "scoreImpact": -10
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "UserService",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Decomposed into focused domain services."
+        }
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Graph definition mixing declarative assembly with inline execution or fat logic.",
+      "ruleIds": ["MOD06"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-006-interface-design.py",
+      "targetFunction": "BackendDeveloperViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD06",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["fat interface", "NotImplementedError"],
+            "scoreImpact": -10
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "BackendDeveloperSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Declarative wiring separated from step handlers."
+        }
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Agent step calling raw external API/SDK directly inline.",
+      "ruleIds": ["MOD07"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-003-coupling-di.py",
+      "targetFunction": "CheckoutServiceViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD07",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["ConcreteStripeClient"],
+            "scoreImpact": -10
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "CheckoutServiceSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Routes call through abstracted gateway interface."
+        }
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Business logic and calculations directly inside route handler.",
+      "ruleIds": ["MOD08"],
+      "technology": "Python/Flask",
+      "inputFile": "validation/test-data/TC-001-layer-separation.py",
+      "targetFunction": "handle_get_user_orders_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD08",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["controller", "sqlite3"],
+            "scoreImpact": -12
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "handle_get_user_orders_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Handler delegates domain decisions to service layer."
+        }
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Raw SQL query string inside domain service method without repository layer.",
+      "ruleIds": ["MOD09"],
+      "technology": "Python/Flask",
+      "inputFile": "validation/test-data/TC-001-layer-separation.py",
+      "targetFunction": "handle_get_user_orders_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD09",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["SELECT", "sqlite3"],
+            "scoreImpact": -12
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "handle_get_user_orders_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Persistence logic encapsulated in OrderRepository."
+        }
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Direct fetch side-effects and data loading inside JSX component body.",
+      "ruleIds": ["MOD10"],
+      "technology": "TypeScript/React",
+      "inputFile": "validation/test-data/TC-012-ui-modularity.tsx",
+      "targetFunction": "UserProfileWidgetViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD10",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["fetch", "useEffect", "JSX"],
+            "scoreImpact": -10
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "UserProfileWidgetSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Extracts network fetch into custom hook `useUserProfile`."
+        }
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Feature-specific code placed in global utility folder instead of feature folder.",
+      "ruleIds": ["MOD11"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-domain-boundaries.py",
+      "targetFunction": "get_user_internal_discount_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD11",
+            "severity": "low",
+            "confidence": "high",
+            "evidenceContains": ["internal", "private"],
+            "scoreImpact": -5
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "get_user_internal_discount_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Collocated in feature module."
+        }
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Circular import loop between two modules.",
+      "ruleIds": ["MOD12"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-005-cyclic-dependencies.py",
+      "targetFunction": "process_order_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "MOD12",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["inline", "import", "cycle"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "process_order_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Circular dependency broken using dependency injection interface."
+        }
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Clean architecture service with repository abstraction.",
+      "ruleIds": ["MOD01", "MOD02"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-015-clean-architecture.py",
+      "targetFunction": "UserService",
+      "expected": {
+        "findingsPresent": false
+      }
+    }
+  ]
+}
