@@ -1,0 +1,343 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "skill-eng-security",
+  "version": "1.0.0",
+  "description": "Validation test suite for all 12 security rules (SEC01–SEC12). Covers vulnerability detection, safe implementations, and false-positive protection across dedicated test files.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "SQL injection via unsanitized user string concatenation.",
+      "ruleIds": ["SEC01"],
+      "technology": "Python/SQLite",
+      "inputFile": "validation/test-data/TC-001-injection.py",
+      "targetFunction": "handle_search_users_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC01",
+            "severity": "critical",
+            "confidence": "high",
+            "evidenceContains": ["SELECT", "sqlite3"],
+            "scoreImpact": -1.5
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "handle_search_users_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses parameterized query string binding."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Hardcoded secret API key in class constructor.",
+      "ruleIds": ["SEC02"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-002-hardcoded-secret.py",
+      "targetFunction": "StripeServiceViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC02",
+            "severity": "critical",
+            "confidence": "high",
+            "evidenceContains": ["sk_live", "Hardcoded"],
+            "scoreImpact": -1.5
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "StripeServiceSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Loads secret from environment variable."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "BOLA / IDOR vulnerability lacking ownership check.",
+      "ruleIds": ["SEC03"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-003-bola-authz.py",
+      "targetFunction": "get_user_profile_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC03",
+            "severity": "critical",
+            "confidence": "high",
+            "evidenceContains": ["BOLA", "profile_id"],
+            "scoreImpact": -1.5
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "get_user_profile_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Enforces user ownership verification against caller session."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Unencrypted credit card PII storage in database.",
+      "ruleIds": ["SEC04"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-004-data-exposure.py",
+      "targetFunction": "store_user_card_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC04",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["credit_card_number", "INSERT"],
+            "scoreImpact": -1.2
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "store_user_card_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Encrypts sensitive data using AES-256 before storage."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Unvalidated JSON payload without schema boundary checks.",
+      "ruleIds": ["SEC05"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-005-input-validation.py",
+      "targetFunction": "process_user_payload_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC05",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["request.json", "untyped"],
+            "scoreImpact": -0.8
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "process_user_payload_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Enforces strict Pydantic schema validation and boundaries."
+        }
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Unescaped raw HTML output injection in React component.",
+      "ruleIds": ["SEC06"],
+      "technology": "TypeScript/React",
+      "inputFile": "validation/test-data/TC-006-xss.tsx",
+      "targetFunction": "UserCommentViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC06",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["dangerouslySetInnerHTML"],
+            "scoreImpact": -1.2
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "UserCommentSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses standard JSX string auto-escaping."
+        }
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "State-changing POST handler lacking anti-CSRF protection.",
+      "ruleIds": ["SEC07"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-007-csrf.py",
+      "targetFunction": "update_email_handler_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC07",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["POST", "csrf"],
+            "scoreImpact": -1.0
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "update_email_handler_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Verifies anti-CSRF token before updating user state."
+        }
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Unpinned package dependency versions with wildcard selectors.",
+      "ruleIds": ["SEC08"],
+      "technology": "JSON/Node",
+      "inputFile": "validation/test-data/TC-008-dependencies.json",
+      "targetFunction": "dependencies",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC08",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["*", ">=4.0.0"],
+            "scoreImpact": -0.8
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "safeDependencies",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Pins exact dependency version numbers."
+        }
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Production security misconfiguration enabling DEBUG mode and wildcard CORS.",
+      "ruleIds": ["SEC09"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-009-configuration.py",
+      "targetFunction": "AppConfigViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC09",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["DEBUG = True", "CORS_ALLOW_ALL_ORIGINS"],
+            "scoreImpact": -1.0
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "AppConfigSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Disables DEBUG mode and restricts CORS origins."
+        }
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "SSRF vulnerability from fetching unvalidated target URL.",
+      "ruleIds": ["SEC10"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-010-ssrf.py",
+      "targetFunction": "fetch_remote_webhook_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC10",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["requests.get", "target_url"],
+            "scoreImpact": -1.2
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "fetch_remote_webhook_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Validates target hostname against domain allowlist."
+        }
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Non-cryptographic PRNG used for security session token generation.",
+      "ruleIds": ["SEC11"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-cryptography.py",
+      "targetFunction": "generate_session_token_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC11",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["random.randint", "PRNG"],
+            "scoreImpact": -1.0
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "generate_session_token_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses secrets.token_hex for cryptographically secure tokens."
+        }
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Sensitive credentials and bearer tokens written directly to logs.",
+      "ruleIds": ["SEC12"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-012-logging.py",
+      "targetFunction": "log_user_login_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SEC12",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["password", "token"],
+            "scoreImpact": -0.8
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "log_user_login_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Redacts sensitive token and password fields before logging."
+        }
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Fully compliant secure user profile endpoint.",
+      "ruleIds": ["SEC01", "SEC03"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-013-secure-endpoint.py",
+      "targetFunction": "SecureUserProfileEndpoint",
+      "expected": {
+        "findingsPresent": false
+      }
+    }
+  ]
+}
