@@ -27,7 +27,7 @@ latency, throughput, memory, bundle size, Core Web Vitals, slow queries, N+1, or
 
 ## 2. Technology Context
 
-Infer the relevant technology stack from the supplied code, file extensions, imports, dependency manifests, configuration, and surrounding context. Apply shared performance principles across supported technologies, adapting detection criteria to the technologies actually present.
+Infer the relevant technology stack from the supplied code, file extensions, imports, dependency manifests, configuration, and surrounding context. Apply shared performance principles across supported technologies, adapting detection criteria to the technologies actually present.Do not create separate top-level skills for individual languages or frameworks
 
 Refer to `references/checklist.md` for technology-specific detection patterns and examples.
 
