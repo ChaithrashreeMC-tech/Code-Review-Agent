@@ -1,0 +1,328 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "skill-eng-business-logic",
+  "version": "1.0.0",
+  "description": "Validation test suite for business logic review skill (BIZ01–BIZ10). Covers business rule adherence, state transitions, boundary checks, cross-layer consistency, uncertainty handling, and false-positive boundaries.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Correct implementation of documented business rule matches specification.",
+      "ruleIds": ["BIZ01", "BIZ02"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-001-pricing-rules.py",
+      "targetFunction": "calculate_discount_correct",
+      "expected": {
+        "findingsPresent": false
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_discount_correct",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Exact match to documented pricing spec."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Incorrect calculation threshold applies discount below qualifying tier minimum.",
+      "ruleIds": ["BIZ02"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-001-pricing-rules.py",
+      "targetFunction": "calculate_discount_incorrect_threshold",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "BIZ02",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["500.0", "1000.0", "threshold"],
+            "scoreImpact": -15
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_discount_correct",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Threshold strictly adheres to subtotal >= 1000.0."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Invalid workflow allows order approval directly from DRAFT bypassing SUBMITTED.",
+      "ruleIds": ["BIZ03"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-003-state-transitions.py",
+      "targetFunction": "OrderStateMachineViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "BIZ03",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["DRAFT", "SUBMITTED", "APPROVED"],
+            "scoreImpact": -12
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "OrderStateMachineSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "State machine enforces strictly sequential transition."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Boundary condition defect uses strict inequality excluding exact qualifying age 18.",
+      "ruleIds": ["BIZ05"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-004-boundary-checks.py",
+      "targetFunction": "verify_subscription_age_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "BIZ05",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["> 18", ">= 18", "boundary"],
+            "scoreImpact": -8
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "verify_subscription_age_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Inclusive inequality matches spec boundary definition."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Incorrect frontend business behavior applies non-matching free shipping threshold.",
+      "ruleIds": ["BIZ09", "BIZ05"],
+      "technology": "TypeScript",
+      "inputFile": "validation/test-data/TC-005-frontend-checkout.ts",
+      "targetFunction": "formatCheckoutSummaryViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "BIZ09",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["75.0", "50.0", "freeShipping"],
+            "scoreImpact": -10
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "formatCheckoutSummarySafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Frontend threshold matches backend specification."
+        }
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Incorrect backend business behavior applies tax unconditionally ignoring exemption flag.",
+      "ruleIds": ["BIZ01"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-006-backend-tax.py",
+      "targetFunction": "calculate_invoice_tax_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "BIZ01",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["is_tax_exempt", "tax", "unconditionally"],
+            "scoreImpact": -12
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_invoice_tax_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Honors tax exemption flag per specification."
+        }
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Defect requiring tracing across layers omits minimum purchase validation for promo code.",
+      "ruleIds": ["BIZ09", "BIZ02"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-007-cross-layer.py",
+      "targetFunction": "apply_promo_code_service_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "BIZ09",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["VIP100", "500.0", "minimum purchase"],
+            "scoreImpact": -10
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "apply_promo_code_service_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Verifies subtotal qualification requirement across layers."
+        }
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Persistence consistency violation debits wallet balance without recording ledger audit entry.",
+      "ruleIds": ["BIZ06"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-008-data-consistency.py",
+      "targetFunction": "WalletServiceViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "BIZ06",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["ledger", "balance", "atomic"],
+            "scoreImpact": -12
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetFunction": "WalletServiceSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Atomically updates balance and creates ledger entry."
+        }
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Missing specification for plan downgrade grace period recorded as uncertainty note with zero deduction.",
+      "ruleIds": ["BIZ01"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-009-spec-uncertainty.py",
+      "targetFunction": "calculate_downgrade_grace_period",
+      "expected": {
+        "findingsPresent": false,
+        "uncertaintyPresent": true,
+        "uncertaintyContains": ["grace period", "specs/plans/business-spec.md"]
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_downgrade_grace_period",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Unstated requirements are not reported as defects."
+        }
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Contradictory return window duration specifications handled via uncertainty note with zero deduction.",
+      "ruleIds": ["BIZ01"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-009-spec-uncertainty.py",
+      "targetFunction": "calculate_return_window_ambiguous",
+      "expected": {
+        "findingsPresent": false,
+        "uncertaintyPresent": true,
+        "uncertaintyContains": ["30 days", "14 days", "ambiguous"]
+      },
+      "safeCounterpart": {
+        "targetFunction": "calculate_return_window_ambiguous",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Ambiguous specifications prompt uncertainty note without deduction."
+        }
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Potential null issue already handled by upstream schema validation middleware is safe.",
+      "ruleIds": ["BIZ04"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-safe-counterparts.py",
+      "targetFunction": "process_order_request_safe",
+      "expected": {
+        "findingsPresent": false
+      },
+      "notApplicableCase": {
+        "targetFunction": "process_order_request_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Input guarantees handled by framework/middleware pipeline."
+        }
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Security parameterization or maintainability concern not misclassified as business logic violation.",
+      "ruleIds": ["BIZ01"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-safe-counterparts.py",
+      "targetFunction": "query_customer_orders_safe",
+      "expected": {
+        "findingsPresent": false
+      },
+      "notApplicableCase": {
+        "targetFunction": "query_customer_orders_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Evaluated by sibling Security skill rather than Business Logic."
+        }
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Missing unit test in PR without evidence of business calculation defect is safe.",
+      "ruleIds": ["BIZ10"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-safe-counterparts.py",
+      "targetFunction": "calculate_loyalty_points_safe",
+      "expected": {
+        "findingsPresent": false
+      },
+      "notApplicableCase": {
+        "targetFunction": "calculate_loyalty_points_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Code implementation matches specification correctly."
+        }
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": "Correct implementation differing from reviewer design preference is safe.",
+      "ruleIds": ["BIZ01"],
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-safe-counterparts.py",
+      "targetFunction": "aggregate_tier_totals_safe",
+      "expected": {
+        "findingsPresent": false
+      },
+      "notApplicableCase": {
+        "targetFunction": "aggregate_tier_totals_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Architectural/style preferences are not business defects."
+        }
+      }
+    }
+  ]
+}
+

@@ -71,7 +71,7 @@ Return structured output compatible with the Code Review Portal Scorecard Aggreg
 ```json
 {
   "dimension": "modularity",
-  "score": 85,
+  "score": 8.0,
   "findings": [
     {
       "ruleId": "MOD08",
@@ -89,7 +89,7 @@ Return structured output compatible with the Code Review Portal Scorecard Aggreg
     }
   ],
   "uncertainty_notes": [],
-  "blocked": false
+  "blocked": true
 }
 ```
 
@@ -109,9 +109,10 @@ Return structured output compatible with the Code Review Portal Scorecard Aggreg
 | `status` | string | No | Finding lifecycle status (default: `open`) |
 
 Integration rules for the aggregator:
-- `score` starts at 100, reduced by deductions according to [`references/scoring-guide.md`](references/scoring-guide.md).
-- `blocked` is set to `true` when score is below 60 and includes at least one `critical` or `high` finding.
-- Low-confidence observations must be recorded in `uncertainty_notes` and incur 0 deductions.
+- `score` is calculated directly on a native 0.0–10.0 scale, reduced by deductions according to [`references/scoring-guide.md`](references/scoring-guide.md).
+- `blocked` is set to `true` when the dimension score is below 9.0 or when any confirmed critical violation is present.
+- 10.0 (10/10) indicates pass with zero violations; 9.0 (9/10) indicates pass with at most one minor non-blocking finding and no critical violations.
+- Low-confidence observations must be recorded in `uncertainty_notes` and incur 0.0 deductions.
 
 ## 7. Supporting References
 

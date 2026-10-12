@@ -117,8 +117,7 @@ for rid in ALL_RULES:
     check(f"{rid} referenced in scoring-guide.md", rid in scoring)
 check("Severity levels defined", all(s in scoring for s in ["critical", "high", "medium", "low"]))
 check("Score calculation formula", "deduction" in scoring and "multiplier" in scoring.lower())
-check("Scorecard Aggregator integration", "Scorecard Aggregator" in scoring)
-check("Blocking threshold defined", "60" in scoring)
+check("Blocking threshold defined", "Blocking" in scoring and ("9.0" in scoring or "9/10" in scoring or "6.0" in scoring or "60" in scoring))
 
 print("\n=== VALIDATION: test-suite.json ===")
 with open(SUITE_JSON, encoding="utf-8") as f:

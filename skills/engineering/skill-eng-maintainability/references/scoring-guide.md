@@ -1,178 +1,88 @@
 # Maintainability Scoring Guide
 
-This guide defines how findings from `SKILL.md` rules MAINT01–MAINT14 are
-classified and how the maintainability dimension score is calculated for the Code
-Review Portal's Scorecard Aggregator.
+This guide defines how findings from `SKILL.md` rules MAINT01–MAINT14 are classified and how the maintainability dimension score and merge-blocking decisions are calculated directly on a native **0.0–10.0 scale** for the Code Review Portal's Scorecard Aggregator.
 
 ---
 
-## 1. Severity Classification
+## 1. Severity Classification & Base Deductions
 
-Severity reflects the **demonstrated impact** of the maintainability defect on code
-comprehension, defect risk, testability, and the cost of future modifications. It must
-not be inflated solely because code differs from a personal stylistic preference.
+Severity reflects the **demonstrated impact** of the maintainability defect on code comprehension, defect risk, testability, and modification costs across rules MAINT01–MAINT14 (e.g. duplication MAINT01, complex control flow MAINT02, misleading naming MAINT03, multi-responsibility methods MAINT04, tight coupling MAINT05, god classes MAINT06, swallowed errors MAINT07, magic literals MAINT08, testability obstacles MAINT09, leaky abstractions MAINT10, dead code MAINT11, contract documentation MAINT12, shotgun surgery MAINT13, and framework anti-patterns MAINT14).
 
-| Severity | Definition |
-|---|---|
-| **critical** | Severe architectural defect that directly causes high defect risk, prevents unit testing entirely, or creates catastrophic coupling/side-effects. |
-| **high** | Major maintainability impediment: deeply tangled logic, unhandled swallowed errors hiding corrupt state, severe duplication in core rules, or captive DI dependencies. |
-| **medium** | Moderate maintainability risk: functions with multiple responsibilities, scattered magic numbers, missing docstrings on tricky algorithms, or un-memoized complex selectors. |
-| **low** | Minor code smell, minor naming ambiguity, or cosmetic maintenance opportunity with low risk of causing bugs or blocking future work. |
-
-### Severity Anchors by Rule
-
-| Rule | Critical Example | High Example | Medium Example | Low Example |
-|---|---|---|---|---|
-| MAINT01 | Critical billing rules copy-pasted across 4 modules with divergent edits | Duplicate authorization logic in 2 endpoints | Duplicate date formatting helper in 3 files | Incidental 2-line mapping logic in 2 places |
-| MAINT02 | 7-level nested loop/conditional with 10+ boolean operators in financial math | 5-level nested conditionals with side-effects | 40-line complex if/else chain | Minor nested ternary expression |
-| MAINT03 | Method named `checkAccess()` that secretly deletes records | Variable named `isValid` holding a user ID | Ambiguous variable name `data2` | Slightly verbose variable name |
-| MAINT04 | 300-line method handling parsing, auth, DB queries, and email delivery | 100-line method with flag parameter splitting all logic | 60-line method doing formatting and logging | 25-line method with slightly mixed concerns |
-| MAINT05 | Business logic directly instantiates raw socket connection preventing mock | Core service directly invokes concrete DB provider | Law of Demeter violation crossing 4 objects | Minor direct dependency on concrete utility class |
-| MAINT06 | Omnibus 2,000-line `SystemManager` class doing auth, orders, and cache | God class handling both PDF generation and database migrations | Bloated utility file with 30 unrelated functions | Class with 2 slightly tangential helper methods |
-| MAINT07 | Empty `except Exception: pass` concealing data loss during transactions | Catching exception, logging generic text, returning `null` | Catching exception and re-throwing without root cause | Missing error context on an already safe fallback |
-| MAINT08 | Hardcoded production database credentials or secret keys | Hardcoded production API URLs in deep business logic | Scattered magic numbers in business calculation | Standard HTTP status code used inline |
-| MAINT09 | Financial calculation directly calling `datetime.now()` making testing impossible | Static global mutable state mutated across test suites | Heavy private method that cannot be verified in isolation | Test fixture with slightly rigid assertions |
-| MAINT10 | 6 layers of abstract wrapper classes that each forward a single method | Premature generic framework for a simple 10-line feature | Mixing Active Record and Repository in same file | Interface with only one implementation |
-| MAINT11 | 200 lines of dead, commented-out historical code left in core service | Unreachable code block after unconditional raise/return | Unused private helper method | Unused imported package |
-| MAINT12 | Misleading docstring stating function returns sanitized data when it does not | Undocumented complex custom compression algorithm | Missing docstring on public API endpoint | Missing comment on non-obvious line of code |
-| MAINT13 | Adding 1 enum status forces edits in 15 distant files due to raw type checks | Modifying user record forces updating 10 manual serializers | Redundant field-by-field copy across 3 tiers | Small localized type update |
-| MAINT14 | Scoped service injected into Singleton (.NET captive dependency) | 600-line React component with prop drilling across 7 layers | Python wildcard imports shadowing builtins | Slightly non-idiomatic framework usage |
+| Severity | Base Deduction (0–10 Scale) | Definition & Maintainability Impact |
+|---|---|---|
+| **critical** | 6.0 | Severe architectural defect that causes high defect risk, prevents unit testing entirely, conceals runtime data loss, or creates catastrophic coupling. Triggers unconditional merge block. |
+| **high** | 4.0 | Major maintainability impediment: deeply tangled control flow, swallowed exceptions, core calculation duplication, hardcoded credentials, or captive DI dependencies. |
+| **medium** | 2.0 | Moderate maintainability risk: multi-responsibility methods, scattered magic numbers, undocumented complex algorithms, or un-memoized complex selectors. |
+| **low** | 1.0 | Minor code smell, naming ambiguity, or cosmetic maintenance opportunity with low defect risk. |
 
 ---
 
-## 2. Confidence Levels
+## 2. Confidence and Uncertainty Handling
 
-Confidence reflects how strongly the available evidence supports the finding.
+Confidence measures how strongly code evidence supports a finding:
 
-| Confidence | Definition |
-|---|---|
-| **high** | The finding is directly visible in the diff with clear, unambiguous evidence of maintainability harm. |
-| **medium** | The pattern is visibly risky, but full repo context (call sites, callers, test suites) is only partially visible. |
-| **low** | The concern is speculative or depends on future changes that may not occur. |
+| Confidence | Multiplier | Definition |
+|---|---|---|
+| **high** | 1.00 | Finding is directly visible in the diff with clear, unambiguous evidence of maintainability harm. |
+| **medium** | 0.70 | Pattern is visibly risky, but full repository context (callers, test suites) is only partially visible. |
+| **low** | 0.30 | Concern is speculative or depends on unverified future modifications. |
 
-**Low-confidence concerns must not be reported as findings.** Instead, include
-an `uncertainty_note` at the dimension level explaining:
-- What pattern was observed
-- Why it cannot be confirmed as a defect
-- What additional repository context would resolve the uncertainty
+**Low-confidence concerns must not be reported as findings.** Instead, record an `uncertainty_note` at the dimension level (0.0 score deduction).
 
 ---
 
-## 3. Score Calculation
+## 3. Native 0–10 Score Calculation
 
-The maintainability dimension score starts at **100** and is reduced by deductions
-for each finding. Deductions are computed using **base deduction × confidence modifier**.
-
-### Base Deductions by Severity
-
-| Severity | Base Deduction |
-|---|---|
-| critical | 25 |
-| high | 15 |
-| medium | 7 |
-| low | 2 |
-
-### Confidence Modifier
-
-| Confidence | Multiplier |
-|---|---|
-| high | 1.00 |
-| medium | 0.70 |
-| low | 0.30 |
-
-### Deduction Formula
+Maintainability scores are calculated directly on a **0.0 to 10.0 scale** from start to finish without any intermediate 0–100 calculation or division:
 
 ```
 deduction = round(base_deduction × confidence_multiplier)
+final_score = max(0.0, min(10.0, 10.0 - sum(deductions)))
 ```
 
-Cap total deductions at 100 (minimum score is 0).
+- **Starting Score:** Initialized at `10.0`.
+- **Deductions:** Applied directly on the 0–10 scale.
+- **Precision:** Rounded to one decimal place (`X.X`) and clamped within `[0.0, 10.0]`.
 
-### Example Calculation
-
-| Finding | Severity | Confidence | Base | Multiplier | Deduction |
-|---|---|---|---|---|---|
-| Swallowed exception in billing | high | high | 15 | 1.00 | 15 |
-| Complex 5-level nested loop | medium | high | 7 | 1.00 | 7 |
-| Scattered magic literals | medium | medium | 7 | 0.70 | 5 |
-| **Total deduction** | | | | | **27** |
-| **Final score** | | | | | **73** |
+### Deduplication and Documented Exceptions
+- **Duplicate Findings:** Multiple symptoms stemming from one underlying design flaw produce **one primary finding** under the most specific applicable rule ID (MAINT01–MAINT14).
+- **Approved Exceptions:** Documented trade-offs (ADRs or PR notes) reduce deductions by **50%** with `status: "accepted"`.
 
 ---
 
-## 4. Handling Duplicate Findings
+## 4. Standard Scoring and Blocking Rubric
 
-When multiple symptoms share a single root cause, they must produce **one primary finding**
-using the most specific applicable rule ID.
+The maintainability review enforces the standard merge-blocking policy:
 
-**Rule:** The root-cause finding counts once for scoring. Symptoms that are merely
-manifestations of the same architectural issue are not separately deducted.
-
-**Example:** A bloated God class (MAINT06) that also has a 200-line method (MAINT04) and
-scattered magic values (MAINT08). Report one primary MAINT06 finding documenting the
-full scope in `evidence`. Do not apply three separate deductions.
-
----
-
-## 5. Documented Exceptions and Accepted Trade-offs
-
-When the team has documented an accepted trade-off (in code comments, ADRs, or PR
-descriptions), reduce the deduction by **50%** and set `status` to `accepted`.
-
-**Examples of documented exceptions:**
-- "Intentionally duplicate this calculation to keep billing and warehouse services independently deployable" — MAINT01 reduced by 50%
-- "Temporary workaround for upstream vendor bug #4512" — MAINT02 reduced by 50%
+| Score | Status | Description & Blocking Rule |
+|---|---|---|
+| **10.0 (10/10)** | ✅ **Pass** | **Zero confirmed violations.** Clean, readable, and highly maintainable code. |
+| **9.0 (9/10)** | ✅ **Pass with minor issues** | **At most one minor (low) non-blocking violation.** No medium, high, or critical maintainability risks. |
+| **Below 9.0 (< 9/10)** | 🔴 **Block** | **Merge Blocked (`blocked: true`).** Two or more minor issues, or any medium/high violation. |
+| **Critical Override** | 🔴 **Block** | **Merge Blocked (`blocked: true`).** Any confirmed critical violation blocks merge unconditionally regardless of numeric score. |
 
 ---
 
-## 6. Blocking vs. Advisory Findings
+## 5. Scorecard Aggregator Integration & Global Review Decision
 
-### Blocking Findings
-
-A review is considered **blocked** when:
-- Final dimension score is **below 60**, AND
-- At least one finding has severity `critical` or `high`
+The maintainability review skill produces an evaluation object conforming to the global Scorecard Aggregator contract using native 0–10 scoring:
 
 ```json
 {
   "dimension": "maintainability",
-  "score": 52,
-  "blocked": true,
-  "block_reason": "One or more high/critical maintainability risks require resolution or explicit acceptance before merge."
-}
-```
-
-### Advisory Findings
-
-All `medium` and `low` severity findings are advisory and do not block merge.
-
-- **75–100**: Passing ✅
-- **60–74**: Flagged (Advisory warning, review recommended) ⚠️
-- **0–59**: Blocked (Requires review-owner approval) 🔴
-
----
-
-## 7. Scorecard Aggregator Integration
-
-The maintainability skill returns a result object compatible with the Code Review
-Portal's Scorecard Aggregator:
-
-```json
-{
-  "dimension": "maintainability",
-  "score": 82,
+  "score": 9.0,
   "findings": [
     {
-      "ruleId": "MAINT01",
-      "title": "Duplicated Pricing Calculation Logic",
-      "severity": "medium",
+      "ruleId": "MAINT03",
+      "title": "Ambiguous Variable Name in Helper Function",
+      "severity": "low",
       "confidence": "high",
-      "file": "src/services/billing_service.py",
-      "lineStart": 45,
-      "lineEnd": 68,
-      "evidence": "Identical tax and discount calculation logic copied in checkout_service.py:112",
-      "impact": "Changes to discount rules must be updated in multiple files, risking divergence",
-      "recommendation": "Extract shared calculation into PricingPolicy.calculate_total()",
+      "file": "src/utils/formatters.py",
+      "lineStart": 14,
+      "lineEnd": 20,
+      "evidence": "Variable named 'tmp' used to store intermediate price string",
+      "impact": "Minor readability issue; localized to private helper function",
+      "recommendation": "Rename 'tmp' to 'formatted_price'",
       "technology": "Python",
       "status": "open"
     }
@@ -182,3 +92,6 @@ Portal's Scorecard Aggregator:
 }
 ```
 
+### Global Review Decision
+1. **Dimension Evaluation:** Returns `score` (0.0–10.0) and `blocked` (`blocked: true` if score $< 9.0$ or critical violation present).
+2. **Global Aggregate:** The global review passes **only if every evaluated dimension passes** ($\text{score} \ge 9.0$ and $\text{blocked} = \text{false}$). If any dimension is blocked, the global review is marked blocked.
