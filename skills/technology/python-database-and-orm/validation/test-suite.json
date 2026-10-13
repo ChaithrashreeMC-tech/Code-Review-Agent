@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "suite": "python-database-and-orm",
+  "version": "1.0.0",
+  "description": "Validation test cases for Python database ORM models, SQL injection, N+1 queries, and session management.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Detect SQL injection risk from unformatted raw string queries",
+      "category": "sql-injection",
+      "technology": "python-database-and-orm",
+      "inputFile": "validation/test-data/TC-001-sql-injection-raw-query.py",
+      "targetSymbol": "find_user_by_name_unformatted",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "ORM01",
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "evidenceContains": ["find_user_by_name_unformatted", "string formatting", "SQL injection"]
+          }
+        ],
+        "notes": "Direct string interpolation into raw SQL statements poses critical SQL injection vulnerabilities."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "find_user_by_name_parameterized",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses parameterized bindings (:name) safely."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Detect N+1 query performance hazard from lazy loading in loops",
+      "category": "n-plus-1",
+      "technology": "python-database-and-orm",
+      "inputFile": "validation/test-data/TC-002-n-plus-1-query-violation.py",
+      "targetSymbol": "get_user_orders_n_plus_1",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "ORM02",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["get_user_orders_n_plus_1", "N+1", "selectinload"]
+          }
+        ],
+        "notes": "Accessing lazy-loaded ORM relationships in loops generates high SQL query overhead."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "get_user_orders_eager_loaded",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Eager loads relationships using selectinload()."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Detect missing transaction rollback on exception",
+      "category": "transactions",
+      "technology": "python-database-and-orm",
+      "inputFile": "validation/test-data/TC-003-missing-transaction-rollback.py",
+      "targetSymbol": "execute_transfer_unhandled_rollback",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "ORM03",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["execute_transfer_unhandled_rollback", "rollback", "exception"]
+          }
+        ],
+        "notes": "Exceptions during DB operations must trigger explicit transaction rollbacks to prevent session corruption."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "execute_transfer_handled_rollback",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Includes explicit await session.rollback() in exception handler."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Detect unclosed database sessions causing connection leaks",
+      "category": "connection-management",
+      "technology": "python-database-and-orm",
+      "inputFile": "validation/test-data/TC-004-unclosed-db-session.py",
+      "targetSymbol": "fetch_records_unclosed_session",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "ORM04",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["fetch_records_unclosed_session", "context manager", "connection leak"]
+          }
+        ],
+        "notes": "Instantiating sessions without context managers or clean teardown leaks DB connection pool slots."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "fetch_records_managed_session",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses async with AsyncSession context manager."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Verify clean passing SQLAlchemy 2.0 DeclarativeBase model",
+      "category": "valid-model",
+      "technology": "python-database-and-orm",
+      "inputFile": "validation/test-data/TC-005-valid-sqlalchemy-model.py",
+      "targetSymbol": "CustomerModel",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Valid SQLAlchemy 2.0 model with Mapped type annotations and primary keys."
+      }
+    }
+  ]
+}
+
