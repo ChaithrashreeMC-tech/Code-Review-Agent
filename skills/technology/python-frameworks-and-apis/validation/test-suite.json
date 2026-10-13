@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "suite": "python-frameworks-and-apis",
+  "version": "1.0.0",
+  "description": "Validation test cases for Python web frameworks, API contracts, status codes, and dependency injection.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Detect unvalidated raw dictionary response without Pydantic model",
+      "category": "response-validation",
+      "technology": "python-frameworks-and-apis",
+      "inputFile": "validation/test-data/TC-001-unvalidated-raw-dict-return.py",
+      "targetSymbol": "get_user_unvalidated_dict",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "API01",
+            "severity": "MEDIUM",
+            "confidence": "HIGH",
+            "evidenceContains": ["get_user_unvalidated_dict", "raw dict", "response_model"]
+          }
+        ],
+        "notes": "Endpoints returning raw dicts bypass Pydantic serialization and risk leaking internal properties."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "get_user_validated_model",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Returns validated model or schema."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Detect missing HTTP 201 status code on POST resource creation endpoint",
+      "category": "status-codes",
+      "technology": "python-frameworks-and-apis",
+      "inputFile": "validation/test-data/TC-002-missing-creation-status-code.py",
+      "targetSymbol": "create_item_default_status",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "API02",
+            "severity": "LOW",
+            "confidence": "HIGH",
+            "evidenceContains": ["create_item_default_status", "status_code", "201 Created"]
+          }
+        ],
+        "notes": "POST creation endpoints should explicitly return 201 Created instead of default 200 OK."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "create_item_explicit_201",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Explicitly specifies status_code=201 Created."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Detect missing extra='forbid' configuration on Pydantic request models",
+      "category": "request-validation",
+      "technology": "python-frameworks-and-apis",
+      "inputFile": "validation/test-data/TC-003-pydantic-extra-forbid.py",
+      "targetSymbol": "UnstrictPayloadViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "API03",
+            "severity": "MEDIUM",
+            "confidence": "HIGH",
+            "evidenceContains": ["UnstrictPayloadViolation", "extra", "forbid"]
+          }
+        ],
+        "notes": "Request models should forbid unknown extra fields to prevent payload pollution."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "StrictPayloadSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Configured with extra='forbid'."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Detect direct global DB instantiations instead of FastAPI Depends()",
+      "category": "dependency-injection",
+      "technology": "python-frameworks-and-apis",
+      "inputFile": "validation/test-data/TC-004-fastapi-dependency-injection.py",
+      "targetSymbol": "fetch_data_direct_global",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "API04",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["fetch_data_direct_global", "Depends", "global connection"]
+          }
+        ],
+        "notes": "Route handlers should inject dependencies via Depends() for testability and resource lifecycle management."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "fetch_data_injected",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses Depends(get_database_session) cleanly."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Verify clean passing FastAPI endpoint with Pydantic model and Depends",
+      "category": "valid-endpoint",
+      "technology": "python-frameworks-and-apis",
+      "inputFile": "validation/test-data/TC-005-valid-fastapi-endpoint.py",
+      "targetSymbol": "create_product",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Clean FastAPI endpoint conforming to framework best practices."
+      }
+    }
+  ]
+}
+
