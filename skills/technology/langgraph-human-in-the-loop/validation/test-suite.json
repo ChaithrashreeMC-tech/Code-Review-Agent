@@ -1,0 +1,326 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "langgraph-human-in-the-loop",
+  "version": "1.0.0",
+  "description": "Validation test suite for LangGraph Human-in-the-Loop workflows, approval routing, persistence, and security controls.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Valid approval resumes the intended execution",
+      "category": "Approval Routing",
+      "inputFile": "validation/test-data/TC-001.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "defects": [],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Rejection cannot continue into an approval-only operation",
+      "category": "Approval Routing",
+      "inputFile": "validation/test-data/TC-002.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Approval Bypass",
+            "evidenceContains": ["proceeds to execution regardless of rejection"],
+            "recommendation": "Route execution to END or a terminal rejection handler when decision is not approved."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Invalid decision values are rejected or handled according to policy",
+      "category": "Input Validation",
+      "inputFile": "validation/test-data/TC-003.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Unvalidated Resume Value",
+            "evidenceContains": ["unvalidated resume payload"],
+            "recommendation": "Validate resume payload structure and decision enumeration against expected schema."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Edited human input is validated before continuation",
+      "category": "Input Validation",
+      "inputFile": "validation/test-data/TC-004.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Unsanitized State Edit",
+            "evidenceContains": ["human-edited state values applied directly without schema validation"],
+            "recommendation": "Validate human edited fields against Pydantic schema before updating state and resuming."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Resume targets the correct execution and checkpoint",
+      "category": "Checkpoint & Lifecycle",
+      "inputFile": "validation/test-data/TC-005.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "defects": [],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Unauthorized resume attempts are denied",
+      "category": "Security & Authorization",
+      "inputFile": "validation/test-data/TC-006.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Missing Authorization",
+            "evidenceContains": ["Resume payload processed without verifying caller has approval permissions"],
+            "recommendation": "Enforce actor authentication and RBAC authorization check before processing resume."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Cross-tenant execution access is denied when tenant isolation is required",
+      "category": "Security & Authorization",
+      "inputFile": "validation/test-data/TC-007.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Cross-Tenant Access",
+            "evidenceContains": ["Resumes thread without validating that the thread belongs to request_tenant_id"],
+            "recommendation": "Verify thread ownership and enforce tenant isolation boundary before resuming."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Duplicate approval submissions do not duplicate consequential operations",
+      "category": "Approval Workflow Design",
+      "inputFile": "validation/test-data/TC-008.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Non-Idempotent Consequential Operation",
+            "evidenceContains": ["External transfer executed directly without idempotency key"],
+            "recommendation": "Attach unique idempotency keys to external side effects following interrupt resumption."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Concurrent decisions follow the application's conflict policy",
+      "category": "Approval Workflow Design",
+      "inputFile": "validation/test-data/TC-009.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Concurrent Decision Race Condition",
+            "evidenceContains": ["Blind invoke without state lock or version check"],
+            "recommendation": "Implement optimistic locking or distributed mutex around thread resume actions."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Interrupted execution can recover after restart when durability is required",
+      "category": "Checkpoint & Lifecycle",
+      "inputFile": "validation/test-data/TC-010.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Ephemeral Checkpointer",
+            "evidenceContains": ["Production service requiring durable multi-instance recovery compiled with in-memory MemorySaver"],
+            "recommendation": "Use durable checkpointer (e.g. PostgresSaver) for workflows requiring persistence across restarts."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Missing or expired checkpoints are handled explicitly",
+      "category": "Checkpoint & Lifecycle",
+      "inputFile": "validation/test-data/TC-011.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Unhandled Missing Checkpoint",
+            "evidenceContains": ["Fails to check graph.get_state() or handle missing/expired checkpoint"],
+            "recommendation": "Inspect graph.get_state(config) and return explicit 404/expired error when state is missing."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Expired or cancelled approval requests cannot be used to perform the protected action",
+      "category": "Approval Workflow Design",
+      "inputFile": "validation/test-data/TC-012.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Missing Approval Expiry Check",
+            "evidenceContains": ["Processes approval payload without verifying if the request has expired"],
+            "recommendation": "Check approval timeout and cancellation status before issuing graph resume."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Multiple interrupt stages resume at the correct stage",
+      "category": "Interrupts & Resume",
+      "inputFile": "validation/test-data/TC-013.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "defects": [],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": "Audit events are recorded according to requirements",
+      "category": "Security & Authorization",
+      "inputFile": "validation/test-data/TC-014.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Missing Audit Logging",
+            "evidenceContains": ["Modifies production resource without recording reviewer ID, timestamp, or decision rationale"],
+            "recommendation": "Record immutable audit log entry capturing actor, timestamp, thread_id, and decision."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-015",
+      "description": "Sensitive checkpoint and audit data are protected",
+      "category": "Security & Authorization",
+      "inputFile": "validation/test-data/TC-015.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Sensitive Data Leak in Checkpoint",
+            "evidenceContains": ["Raw unmasked credit card CVV and customer SSN sent into interrupt payload"],
+            "recommendation": "Redact, tokenize, or mask sensitive PII/secrets before storing in interrupt payload."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-016",
+      "description": "Retry or recovery cannot silently repeat an external side effect",
+      "category": "Testing & Recovery",
+      "inputFile": "validation/test-data/TC-016.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "Side Effect Replay Hazard",
+            "evidenceContains": ["Non-idempotent external HTTP POST executed before interrupt inside the same node"],
+            "recommendation": "Separate external side-effect execution into dedicated downstream nodes or pass idempotency keys."
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-017",
+      "description": "Low-risk workflow without human approval requirement not incorrectly flagged for lacking interrupt",
+      "category": "False Positive Safeguard",
+      "inputFile": "validation/test-data/TC-017.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "defects": [],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-018",
+      "description": "Workflow not requiring durable resumption not automatically flagged for lacking persistent checkpointer",
+      "category": "False Positive Safeguard",
+      "inputFile": "validation/test-data/TC-018.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "defects": [],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-019",
+      "description": "Version-dependent behavior not reported as confirmed without evidence",
+      "category": "False Positive Safeguard",
+      "inputFile": "validation/test-data/TC-019.py",
+      "expected": {
+        "status": "UNCERTAIN",
+        "findingsPresent": false,
+        "uncertaintyPresent": true,
+        "notes": "Version-dependent behavior requires runtime confirmation before asserting defect."
+      }
+    },
+    {
+      "id": "TC-020",
+      "description": "Distinguish application approval status from graph execution status",
+      "category": "Approval Workflow Design",
+      "inputFile": "validation/test-data/TC-020.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "defects": [],
+        "uncertaintyPresent": false
+      }
+    }
+  ]
+}

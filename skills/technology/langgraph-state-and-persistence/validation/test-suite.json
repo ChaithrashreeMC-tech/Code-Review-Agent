@@ -1,0 +1,275 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "langgraph-state-and-persistence",
+  "version": "1.0.0",
+  "description": "Validation test suite for LangGraph State & Persistence technology skill covering all 16 required scenarios",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Typed state contract using TypedDict with NotRequired for fields populated downstream",
+      "category": "state_contracts",
+      "inputFile": "test-data/TC-001.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "State schema correctly specifies required startup keys and optional downstream keys"
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Correct list accumulation reducer with Annotated[list, operator.add]",
+      "category": "reducers",
+      "inputFile": "test-data/TC-002.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Reducer properly accumulates items across multiple node execution steps"
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Safe partial dictionary returns from nodes without in-place shared state mutation",
+      "category": "state_updates",
+      "inputFile": "test-data/TC-003.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Node returns new state dictionary without mutating inputs"
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Destructive in-place mutation of shared state list causing lost updates and tracking bugs",
+      "category": "state_updates",
+      "inputFile": "test-data/TC-004.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "state['items'].append",
+              "in_place_mutation"
+            ],
+            "recommendation": "Return partial dictionaries with updated state rather than mutating shared state lists in-place."
+          }
+        ],
+        "notes": "In-place mutation defect detected"
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Parallel fan-out branches writing to same state key without an Annotated reducer",
+      "category": "reducers",
+      "inputFile": "test-data/TC-005.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "business_logic",
+            "evidenceContains": [
+              "conflicting_concurrent_write",
+              "missing_reducer"
+            ],
+            "recommendation": "Declare Annotated reducer on state channel to resolve concurrent branch writes."
+          }
+        ],
+        "notes": "Conflicting write in parallel branches detected"
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Durable checkpointing configuration with Postgres checkpointer for multi-turn execution",
+      "category": "checkpointing",
+      "inputFile": "test-data/TC-006.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Durable checkpointer properly wired for multi-turn execution"
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Thread ID used as sole authorization check without tenant ownership verification",
+      "category": "tenant_isolation",
+      "inputFile": "test-data/TC-007.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "security",
+            "evidenceContains": [
+              "unauthorized_thread_access",
+              "missing_ownership_check"
+            ],
+            "recommendation": "Verify user/tenant ownership before retrieving or restoring checkpointed state."
+          }
+        ],
+        "notes": "Missing authorization check on thread access detected"
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Multi-replica production deployment using ephemeral MemorySaver instead of durable checkpointer",
+      "category": "persistence",
+      "inputFile": "test-data/TC-008.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "MemorySaver()",
+              "ephemeral_in_production"
+            ],
+            "recommendation": "Use durable checkpointer (PostgresSaver/RedisSaver) for multi-replica production environments."
+          }
+        ],
+        "notes": "Ephemeral checkpointer in production deployment detected"
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Plaintext secret or API key stored directly in graph state channel",
+      "category": "sensitive_state",
+      "inputFile": "test-data/TC-009.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "security",
+            "evidenceContains": [
+              "api_key_in_state",
+              "sk-proj-secret-key"
+            ],
+            "recommendation": "Never store credentials or API keys in graph state; pass via execution configuration."
+          }
+        ],
+        "notes": "Sensitive credentials in state channel detected"
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Large raw binary payload stored in state rather than object reference URI",
+      "category": "payload_size",
+      "inputFile": "test-data/TC-010.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "performance",
+            "evidenceContains": [
+              "raw_binary_payload",
+              "large_file_bytes"
+            ],
+            "recommendation": "Store external object storage URIs or references instead of raw binary files in graph state."
+          }
+        ],
+        "notes": "Bloated state payload with raw binary bytes detected"
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Non-idempotent external payment side effect repeated during node failure recovery",
+      "category": "recovery",
+      "inputFile": "test-data/TC-011.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "business_logic",
+            "evidenceContains": [
+              "non_idempotent_side_effect",
+              "missing_idempotency_key"
+            ],
+            "recommendation": "Use idempotency keys derived from thread ID and step count for external side effects during recovery."
+          }
+        ],
+        "notes": "Non-idempotent side effect in recoverable node detected"
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Schema evolution adding required field without default breaking legacy persisted checkpoints",
+      "category": "schema_evolution",
+      "inputFile": "test-data/TC-012.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "breaking_schema_change",
+              "unhandled_legacy_checkpoint"
+            ],
+            "recommendation": "New fields in durable state schemas must be optional or provide defaults for legacy checkpoint compatibility."
+          }
+        ],
+        "notes": "Incompatible schema evolution detected"
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Valid ephemeral single-turn workflow intentionally omitting checkpointer (false-positive prevention)",
+      "category": "false_positive_prevention",
+      "inputFile": "test-data/TC-013.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Ephemeral single-turn workflow does not require checkpointer"
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": "Valid state channel using direct overwrite without reducer for scalar field (false-positive prevention)",
+      "category": "false_positive_prevention",
+      "inputFile": "test-data/TC-014.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Scalar channel intentionally uses direct replacement/overwrite"
+      }
+    },
+    {
+      "id": "TC-015",
+      "description": "Insufficient evidence regarding custom checkpointer backend leading to uncertainty recording",
+      "category": "uncertainty",
+      "inputFile": "test-data/TC-015.py",
+      "expected": {
+        "status": "UNCERTAIN",
+        "findingsPresent": false,
+        "uncertaintyPresent": true,
+        "notes": "Custom checkpointer implementation is external and cannot be verified statically"
+      }
+    },
+    {
+      "id": "TC-016",
+      "description": "Consolidation of multiple state serialization errors into single root-cause finding",
+      "category": "consolidation",
+      "inputFile": "test-data/TC-016.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "root_cause_unserializable_state"
+            ],
+            "recommendation": "Consolidate duplicate serialization symptoms into single root-cause finding."
+          }
+        ],
+        "notes": "Single root-cause finding reported"
+      }
+    }
+  ]
+}
+

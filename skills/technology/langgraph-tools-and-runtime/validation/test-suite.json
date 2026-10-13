@@ -1,0 +1,286 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "langgraph-tools-and-runtime",
+  "version": "1.0.0",
+  "description": "Validation test suite for LangGraph Tools and Runtime skill covering all 18 standard scenarios.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Correct tool schemas and model-tool binding",
+      "category": "tool_definition_and_binding",
+      "inputFile": "validation/test-data/TC-001.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Proper tool schema with Pydantic BaseModel and valid model-tool binding."
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "A model requesting a tool that is not registered",
+      "category": "tool_execution_flow",
+      "inputFile": "validation/test-data/TC-002.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "unregistered_tool_request",
+            "evidenceContains": ["execute_raw_code", "tool_calls", "registered_tools"],
+            "recommendation": "Implement fallback error handling or ToolMessage response for unregistered tool requests."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Malformed or missing tool arguments",
+      "category": "tool_definition_and_binding",
+      "inputFile": "validation/test-data/TC-003.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "malformed_arguments_handling",
+            "evidenceContains": ["country_code", "amount", "TypeError"],
+            "recommendation": "Use structured Pydantic schema with validation or safe defaults to handle malformed arguments gracefully."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Tool-call results not being associated with the correct invocation",
+      "category": "toolnode_and_execution_flow",
+      "inputFile": "validation/test-data/TC-004.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "unassociated_tool_call_id",
+            "evidenceContains": ["tool_call_id", "ToolMessage", "call"],
+            "recommendation": "Ensure ToolMessage is populated with matching tool_call_id from the AIMessage tool_calls."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Missing or invalid runtime configuration",
+      "category": "runtime_context_and_dependencies",
+      "inputFile": "validation/test-data/TC-005.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "missing_runtime_config_validation",
+            "evidenceContains": ["configurable", "api_token", "RunnableConfig"],
+            "recommendation": "Validate presence of required configurable keys and handle missing configuration gracefully."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Missing required dependencies",
+      "category": "runtime_context_and_dependencies",
+      "inputFile": "validation/test-data/TC-006.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "uninitialized_dependency",
+            "evidenceContains": ["global_uninitialized_order_service", "submit"],
+            "recommendation": "Inject required application service dependencies explicitly via tool factory or container."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Unauthorized tool access",
+      "category": "tool_security",
+      "inputFile": "validation/test-data/TC-007.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "missing_authorization_boundary",
+            "evidenceContains": ["delete_database_records", "DELETE FROM", "raw_db_executor"],
+            "recommendation": "Enforce strict role-based access control and confirmation boundaries for destructive tools."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Cross-tenant access attempts in a multi-tenant application",
+      "category": "tool_security",
+      "inputFile": "validation/test-data/TC-008.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "cross_tenant_isolation_violation",
+            "evidenceContains": ["tenant_id", "billing_db", "query_by_tenant"],
+            "recommendation": "Extract tenant_id from validated runtime context rather than trusting model-provided arguments."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Retryable and non-retryable errors",
+      "category": "tool_errors_and_retries",
+      "inputFile": "validation/test-data/TC-009.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "invalid_error_classification",
+            "evidenceContains": ["status_code == 400", "ConnectionResetError", "Retryable"],
+            "recommendation": "Classify client 400 Bad Request errors as non-retryable terminal errors."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Bounded retries and timeout behavior",
+      "category": "tool_errors_and_retries",
+      "inputFile": "validation/test-data/TC-010.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "unbounded_retry_loop",
+            "evidenceContains": ["while True", "time.sleep", "inventory_client"],
+            "recommendation": "Implement bounded retries with max attempt limits, exponential backoff, and timeouts."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Duplicate side effects after a retry",
+      "category": "tool_errors_and_retries",
+      "inputFile": "validation/test-data/TC-011.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "non_idempotent_side_effect_retry",
+            "evidenceContains": ["submit_wire_transfer", "bank_wire_api", "transfer"],
+            "recommendation": "Pass idempotency keys to external modifying services to prevent duplicate side effects."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Parallel tool-call behavior where supported",
+      "category": "toolnode_and_execution_flow",
+      "inputFile": "validation/test-data/TC-012.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "ToolNode properly handles parallel tool calls and yields matching ToolMessages."
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Sensitive information in tool results or logs",
+      "category": "tool_security",
+      "inputFile": "validation/test-data/TC-013.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "sensitive_data_exposure",
+            "evidenceContains": ["sk_live_SECRET_API_KEY_12345", "logger.info", "master_key"],
+            "recommendation": "Sanitize and mask secrets and credentials before logging or returning in tool output."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": "Prompt injection within untrusted tool output",
+      "category": "tool_security",
+      "inputFile": "validation/test-data/TC-014.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "unshielded_tool_output",
+            "evidenceContains": ["fetch_public_web_page", "raw_html", "SYSTEM INSTRUCTION"],
+            "recommendation": "Wrap external untrusted tool outputs in data isolation tags and sanitize adversarial prompt injections."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-015",
+      "description": "Missing tests for critical tool execution paths",
+      "category": "tool_testing",
+      "inputFile": "validation/test-data/TC-015.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "missing_critical_tool_tests",
+            "evidenceContains": ["execute_critical_financial_reconciliation", "accounting_engine"],
+            "recommendation": "Provide unit tests with deterministic mocks for critical tool execution paths."
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-016",
+      "description": "False positives where a direct graph node is appropriate and no ToolNode is required",
+      "category": "false_positive_guard",
+      "inputFile": "validation/test-data/TC-016.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Deterministic workflow correctly invokes application services in graph node without ToolNode."
+      }
+    },
+    {
+      "id": "TC-017",
+      "description": "False positives where approval is not required for a low-impact read-only tool",
+      "category": "false_positive_guard",
+      "inputFile": "validation/test-data/TC-017.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Low-impact read-only tool correctly operates without human approval gates."
+      }
+    },
+    {
+      "id": "TC-018",
+      "description": "Version-dependent behavior that cannot be confirmed from the repository evidence",
+      "category": "uncertainty_handling",
+      "inputFile": "validation/test-data/TC-018.py",
+      "expected": {
+        "status": "UNCERTAIN",
+        "findingsPresent": false,
+        "uncertaintyPresent": true,
+        "notes": "Version-dependent runtime behavior recorded as UNCERTAIN without making unfounded assumptions."
+      }
+    }
+  ]
+}
+
