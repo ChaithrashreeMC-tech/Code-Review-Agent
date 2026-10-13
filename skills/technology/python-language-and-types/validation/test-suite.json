@@ -1,0 +1,157 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "python-language-and-types",
+  "version": "1.0.0",
+  "description": "Validation test suite for python-language-and-types technology skill covering modern union types, pattern matching, Protocol typing, Generics, TypeGuard, Pydantic v2, async signatures, type ignore codes, exception chaining, and skill contract separation.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Pipe union type syntax (PEP 604) in function signature.",
+      "category": "Language Features",
+      "technology": "Python 3.10+",
+      "inputFile": "validation/test-data/TC-001-union-types.py",
+      "targetSymbol": "parse_user_id",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Uses native pipe union str | int."
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Structural pattern matching with match/case syntax.",
+      "category": "Language Features",
+      "technology": "Python 3.10+",
+      "inputFile": "validation/test-data/TC-002-pattern-matching.py",
+      "targetSymbol": "process_event_payload",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Extracts dict payload fields via match/case."
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Structural subtyping using Protocol and runtime_checkable.",
+      "category": "Type System",
+      "technology": "Python/Types",
+      "inputFile": "validation/test-data/TC-003-protocol-typing.py",
+      "targetSymbol": "Exportable",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Defines interface via Protocol without subclassing."
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Generic class definition using TypeVar and Generic[T].",
+      "category": "Type System",
+      "technology": "Python/Types",
+      "inputFile": "validation/test-data/TC-004-generics.py",
+      "targetSymbol": "MemoryStore",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Reusable generic memory store container."
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Type narrowing using custom TypeGuard function.",
+      "category": "Type System",
+      "technology": "Python/Types",
+      "inputFile": "validation/test-data/TC-005-type-narrowing.py",
+      "targetSymbol": "is_string_tuple",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Narrows tuple[object, ...] to tuple[str, ...]."
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Pydantic v2 model typing with Field constraints and ConfigDict.",
+      "category": "Type System",
+      "technology": "Python/Pydantic",
+      "inputFile": "validation/test-data/TC-006-pydantic-typing.py",
+      "targetSymbol": "AccountPayload",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Strict immutable Pydantic v2 data model."
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Async method signature return typing.",
+      "category": "Type System",
+      "technology": "Python/Async",
+      "inputFile": "validation/test-data/TC-007-async-typing.py",
+      "targetSymbol": "fetch_account_name",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Explicit return type str | None on async def."
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Enforcement of specific error codes on type ignore comments.",
+      "category": "Validation Workflow",
+      "technology": "Python/mypy",
+      "inputFile": "validation/test-data/TC-008-type-ignore-codes.py",
+      "targetSymbol": "legacy_call_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "TYPE01",
+            "severity": "low",
+            "confidence": "high",
+            "evidenceContains": ["type: ignore", "missing specific error code"]
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetSymbol": "legacy_call_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Specifies error code [name-defined] with rationale."
+        }
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Explicit exception chaining using from clause.",
+      "category": "Language Features",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-009-exception-chaining.py",
+      "targetSymbol": "parse_payload_violation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "LANG01",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["raise ValueError", "missing 'from err'"]
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetSymbol": "parse_payload_safe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Preserves original cause via 'from err'."
+        }
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Separation of technology skill guidance from engineering scoring.",
+      "category": "Skill Contract",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-010-separated-scoring.py",
+      "targetSymbol": "TypeSystemSkillReviewContract",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Delegates score calculation to engineering skills."
+      }
+    }
+  ]
+}
+
