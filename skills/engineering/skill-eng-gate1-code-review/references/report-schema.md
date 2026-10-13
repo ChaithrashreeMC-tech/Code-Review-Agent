@@ -11,6 +11,7 @@ This document defines the structured JSON contract and Markdown reporting format
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Gate1ValidationReport",
   "type": "object",
+  "required": ["gate", "timestamp", "status", "ready_for_pr", "repository", "build_and_static", "automated_tests", "dimensions", "summary", "blocking_reasons", "uncertainty_notes"],
   "properties": {
     "gate": { "type": "string", "enum": ["GATE_1_LOCAL", "GATE_1_ENTRY_GUARD"] },
     "timestamp": { "type": "string", "format": "date-time" },
