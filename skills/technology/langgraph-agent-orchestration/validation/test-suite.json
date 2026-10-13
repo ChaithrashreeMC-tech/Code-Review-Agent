@@ -1,0 +1,277 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "langgraph-agent-orchestration",
+  "version": "1.0.0",
+  "description": "Validation test suite for LangGraph Agent Orchestration technology skill covering all 16 required scenarios",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "A valid single-agent workflow wrapped in the canonical graph package structure",
+      "category": "topology",
+      "inputFile": "test-data/TC-001.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Single agent uses canonical package shape and compiles cleanly"
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "A valid sequential multi-agent workflow with clear step handoffs",
+      "category": "topology",
+      "inputFile": "test-data/TC-002.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Sequential pipeline links nodes in strict order with typed state transitions"
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "A valid parallel multi-agent workflow with concurrent branches and resilient aggregation",
+      "category": "topology",
+      "inputFile": "test-data/TC-003.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Fan-out / fan-in topology with Annotated reducer and aggregator handling branch results"
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "A valid conditional workflow with exhaustive deterministic routing and fallbacks",
+      "category": "topology",
+      "inputFile": "test-data/TC-004.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Conditional edge routes deterministically with complete path mappings"
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "A valid supervisor workflow with bounded iteration limits and explicit termination",
+      "category": "supervisor",
+      "inputFile": "test-data/TC-005.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Supervisor routes dynamically while enforcing iteration limits"
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "An invalid architecture dependency violating import-direction rules (e.g. API router importing graph directly)",
+      "category": "architecture",
+      "inputFile": "test-data/TC-006.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "modularity",
+            "evidenceContains": [
+              "agents.graphs",
+              "compiled_graph",
+              "API Seam Access"
+            ],
+            "recommendation": "API routers must invoke seam services in agents/services/ rather than importing graph objects directly."
+          }
+        ],
+        "notes": "API Seam Access violation detected"
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "A tool bypassing an existing application handler by querying infrastructure directly (Tool Handler Delegation violation)",
+      "category": "tool_bridging",
+      "inputFile": "test-data/TC-007.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "modularity",
+            "evidenceContains": [
+              "infrastructure.database",
+              "session.query",
+              "Tool Handler Delegation"
+            ],
+            "recommendation": "Tools must call Application layer handlers and never access infrastructure/database directly."
+          }
+        ],
+        "notes": "Tool Handler Delegation violation detected"
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "A missing application capability that should be flagged as a requirements gap rather than bypassed",
+      "category": "tool_bridging",
+      "inputFile": "test-data/TC-008.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "business_logic",
+            "evidenceContains": [
+              "shortcut",
+              "missing_handler",
+              "raw_sql"
+            ],
+            "recommendation": "Flag missing application capabilities as requirements gaps rather than implementing shortcut queries."
+          }
+        ],
+        "notes": "Shortcut implementation masking requirements gap detected"
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "A provider-specific client constructed directly inside a node against abstraction rules",
+      "category": "model_abstraction",
+      "inputFile": "test-data/TC-009.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "OpenAI(api_key=",
+              "hardcoded_provider"
+            ],
+            "recommendation": "Request model clients via agents/llm/ factory instead of instantiating vendor clients inside nodes."
+          }
+        ],
+        "notes": "Direct vendor client instantiation in node detected"
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Missing or ineffective recursion limits where a cyclic supervisor loop can run unboundedly",
+      "category": "guardrails",
+      "inputFile": "test-data/TC-010.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "performance",
+            "evidenceContains": [
+              "unbounded_loop",
+              "missing_recursion_limit"
+            ],
+            "recommendation": "Set explicit recursion_limit on graph invocation config and add loop iteration counter guards."
+          }
+        ],
+        "notes": "Unbounded cycle without recursion limit detected"
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Incorrect handoff payload contracts between sequential nodes causing runtime schema mismatch",
+      "category": "contracts",
+      "inputFile": "test-data/TC-011.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "invalid_handoff",
+              "missing_key"
+            ],
+            "recommendation": "Validate handoff payloads against declared state schema contracts across sequential nodes."
+          }
+        ],
+        "notes": "Handoff payload contract violation detected"
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "A parallel branch failure with incorrect aggregation behavior causing unhandled crashes",
+      "category": "error_handling",
+      "inputFile": "test-data/TC-012.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "unhandled_branch_error",
+              "crashes_aggregator"
+            ],
+            "recommendation": "Implement resilient error handling in parallel branches and aggregator nodes."
+          }
+        ],
+        "notes": "Unresilient branch aggregation defect detected"
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "An unsupported assumption about a LangGraph or LangChain API method that does not exist",
+      "category": "api_compatibility",
+      "inputFile": "test-data/TC-013.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "maintainability",
+            "evidenceContains": [
+              "invalid_api_call",
+              "set_magic_router"
+            ],
+            "recommendation": "Use verified LangGraph APIs compatible with the installed version."
+          }
+        ],
+        "notes": "Invalid API call assumption detected"
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": "A valid external repository using a different clean structure (false-positive prevention)",
+      "category": "false_positive_prevention",
+      "inputFile": "test-data/TC-014.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "notes": "Valid external project layout evaluated without false positive structure flags"
+      }
+    },
+    {
+      "id": "TC-015",
+      "description": "Insufficient evidence to confirm a defect leading to uncertainty recording",
+      "category": "uncertainty",
+      "inputFile": "test-data/TC-015.py",
+      "expected": {
+        "status": "UNCERTAIN",
+        "findingsPresent": false,
+        "uncertaintyPresent": true,
+        "notes": "Context is external and cannot be verified statically; recorded as uncertainty"
+      }
+    },
+    {
+      "id": "TC-016",
+      "description": "Duplicate symptoms of an invalid router consolidated into one root-cause finding",
+      "category": "consolidation",
+      "inputFile": "test-data/TC-016.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "modularity",
+            "evidenceContains": [
+              "root_cause_router_defect"
+            ],
+            "recommendation": "Consolidate duplicate routing symptoms into single root-cause finding."
+          }
+        ],
+        "notes": "Single root-cause finding reported"
+      }
+    }
+  ]
+}
