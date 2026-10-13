@@ -1,0 +1,200 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "python-project-setup",
+  "version": "1.0.0",
+  "description": "Validation test suite for python-project-setup technology skill covering repository detection, ConnectRPC template, package managers, lockfiles, Clean Architecture boundaries, generated code protection, tool availability, and execution guardrails.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Correct recognition of documented ConnectRPC enterprise project structure template.",
+      "category": "Project Structure",
+      "technology": "Python/ConnectRPC",
+      "inputFile": "validation/test-data/TC-001-connectrpc-structure.py",
+      "targetSymbol": "ConnectRPCProjectDetector",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Recognizes buf.yaml, backend/proto/, api/gen/, tests/, and uv.lock."
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Correct recognition of conventional Python package layout using src/ layout.",
+      "category": "Project Structure",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-002-python-package.py",
+      "targetSymbol": "StandardPackageDetector",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Recognizes src/ layout, pyproject.toml, and py.typed marker."
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Correct recognition of FastAPI or Flask web service structure.",
+      "category": "Project Structure",
+      "technology": "Python/FastAPI",
+      "inputFile": "validation/test-data/TC-003-fastapi-app.py",
+      "targetSymbol": "FastAPIDetector",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Recognizes app/main.py and routers/ directory."
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Correct recognition of LangGraph AI agent workflow application.",
+      "category": "Project Structure",
+      "technology": "Python/LangGraph",
+      "inputFile": "validation/test-data/TC-004-langgraph-agent.py",
+      "targetSymbol": "LangGraphDetector",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Recognizes graph.py, state.py, and nodes/."
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Correct recognition and handling of monorepo service structure.",
+      "category": "Project Structure",
+      "technology": "Python/Monorepo",
+      "inputFile": "validation/test-data/TC-005-monorepo-service.py",
+      "targetSymbol": "MonorepoDetector",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Recognizes workspace pyproject.toml and services/ subdirectories."
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Respect for existing package manager (Poetry) without forcing uv.",
+      "category": "Tooling & Dependencies",
+      "technology": "Python/Poetry",
+      "inputFile": "validation/test-data/TC-006-poetry-package-manager.py",
+      "targetSymbol": "PackageManagerDetector",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Detects poetry.lock and uses poetry execution commands."
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Detection of inconsistent project configuration or lockfile drift.",
+      "category": "Tooling & Dependencies",
+      "technology": "Python/uv",
+      "inputFile": "validation/test-data/TC-007-lockfile-drift.py",
+      "targetSymbol": "LockfileValidator",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "SETUP01",
+            "severity": "medium",
+            "confidence": "high",
+            "evidenceContains": ["redis>=5.0.0", "missing from lockfile"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Detection of incorrect Clean Architecture cross-layer import dependencies.",
+      "category": "Architecture & Boundaries",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-008-architecture-violation.py",
+      "targetSymbol": "PaymentDomainViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "ARCH01",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["payment_service.infrastructure.persistence", "PostgresDatabaseSession"]
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetSymbol": "PaymentDomainSafe",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Pure domain entity relying on primitive/value object parameters."
+        }
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Detection of hand-modified auto-generated ConnectRPC stub code.",
+      "category": "Generated Code Rules",
+      "technology": "Python/ConnectRPC",
+      "inputFile": "validation/test-data/TC-009-hand-edited-generated-code.py",
+      "targetSymbol": "custom_hand_edited_business_logic",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "GEN01",
+            "severity": "high",
+            "confidence": "high",
+            "evidenceContains": ["api/gen/", "custom_hand_edited_business_logic"]
+          }
+        ]
+      },
+      "safeCounterpart": {
+        "targetSymbol": "generated_service_stub",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Untouched auto-generated stub code."
+        }
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Correct handling of missing optional tools reported as unavailable.",
+      "category": "Validation Workflow",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-010-missing-optional-tool.py",
+      "targetSymbol": "ToolAvailabilityHandler",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Reports missing tool as UNAVAILABLE without creating a code flaw or violation."
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Guardrail against unnecessary restructuring of an existing working project.",
+      "category": "Guardrails",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-011-no-unnecessary-restructuring.py",
+      "targetSymbol": "LayoutPreservationGuardrail",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Preserves working layout unless explicitly instructed to restructure."
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Correct separation of technology guidance from engineering skill scoring.",
+      "category": "Skill Contract",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-012-separated-scoring.py",
+      "targetSymbol": "TechnologySkillReviewContract",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Provides technical setup evidence and delegates scoring to engineering skills."
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Safe behavior blocking unauthorized destructive commands or dependency installs.",
+      "category": "Guardrails",
+      "technology": "Python",
+      "inputFile": "validation/test-data/TC-013-safe-command-behavior.py",
+      "targetSymbol": "SafeCommandExecutor",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Blocks unauthorized destructive shell commands."
+      }
+    }
+  ]
+}
+
