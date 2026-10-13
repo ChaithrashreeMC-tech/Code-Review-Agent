@@ -1,0 +1,9 @@
+{
+  "scenario": "missing_build_tool",
+  "detected_stack": "Rust",
+  "build_command": "cargo check",
+  "tool_available": false,
+  "error_message": "Executable 'cargo' not found in system PATH",
+  "expected_gate_status": "INCOMPLETE"
+}
+

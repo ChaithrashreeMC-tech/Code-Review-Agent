@@ -1,0 +1,9 @@
+{
+  "scenario": "partial_subagent_failure",
+  "dispatched_agents": ["security", "performance", "maintainability", "modularity", "business_logic"],
+  "failed_agent": "business_logic",
+  "failure_reason": "Timeout: business_logic sub-agent did not respond within 30000ms",
+  "expected_gate_status": "INCOMPLETE",
+  "uncertainty_note": "Business logic review could not complete due to sub-agent timeout; verification required."
+}
+

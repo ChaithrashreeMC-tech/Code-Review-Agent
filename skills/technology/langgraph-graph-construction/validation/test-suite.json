@@ -1,0 +1,260 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "suite": "langgraph-graph-construction",
+  "version": "1.1.0",
+  "description": "Validation test suite for LangGraph graph construction covering all 16 evaluation and false-positive prevention requirements",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Valid linear graph compiles and executes cleanly from START to END",
+      "category": "linear_graph",
+      "inputFile": "validation/test-data/TC-001-valid-linear-graph.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "uncertaintyPresent": false,
+        "notes": "Valid linear topology with proper START and END edges"
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Valid conditional routing with exhaustive path map",
+      "category": "conditional_routing",
+      "inputFile": "validation/test-data/TC-002-valid-conditional-routing.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "uncertaintyPresent": false,
+        "notes": "Route function return labels fully match path_map destinations"
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Invalid route destination where route function returns unmapped label",
+      "category": "routing_defect",
+      "inputFile": "validation/test-data/TC-003-invalid-route-destination.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "unmapped_route_destination",
+            "evidenceContains": ["unhandled_case", "path_map"],
+            "recommendation": "Add destination for 'unhandled_case' or adjust route_fn"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Incorrectly registered or missing node referenced in edge",
+      "category": "edge_defect",
+      "inputFile": "validation/test-data/TC-004-unregistered-node-edge.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "unregistered_node_reference",
+            "evidenceContains": ["nonexistent_processor", "add_edge"],
+            "recommendation": "Register node with add_node before referencing in add_edge"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Genuine state update or reducer defect with in-place mutation and type mismatch",
+      "category": "schema_defect",
+      "inputFile": "validation/test-data/TC-005-state-schema-defect.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "state_mutation_and_type_mismatch",
+            "evidenceContains": ["append", "999", "items"],
+            "recommendation": "Return new list instead of in-place mutation and match List[str] schema"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Parallel branches updating the same state key without an Annotated reducer",
+      "category": "reducer_defect",
+      "inputFile": "validation/test-data/TC-006-concurrent-reducer-defect.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "missing_reducer_on_concurrent_channel",
+            "evidenceContains": ["logs", "UnreducedParallelState", "operator.add"],
+            "recommendation": "Use Annotated[List[str], operator.add] for concurrent fan-out channels"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Valid cycle with a termination condition (false-positive prevention)",
+      "category": "bounded_cycle",
+      "inputFile": "validation/test-data/TC-007-valid-bounded-cycle.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "uncertaintyPresent": false,
+        "notes": "Cycle is bounded by retry_count limit; not an infinite loop"
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Genuinely nonterminating execution path or unsafe loop",
+      "category": "nonterminating_loop",
+      "inputFile": "validation/test-data/TC-008-nonterminating-loop.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "infinite_loop",
+            "evidenceContains": ["endless_router", "loop", "noop_node"],
+            "recommendation": "Add bounded exit condition or iteration counter to loop"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Invalid entry or terminal configuration",
+      "category": "entry_finish_defect",
+      "inputFile": "validation/test-data/TC-009-missing-entry-finish.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "missing_entry_finish",
+            "evidenceContains": ["START", "END", "Missing START and END"],
+            "recommendation": "Add entry edge from START and terminal edge to END"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Compile-time error caused by edge referencing unregistered node identifier",
+      "category": "compile_time_defect",
+      "inputFile": "validation/test-data/TC-010-compile-time-error.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "compile_time_topology_error",
+            "evidenceContains": ["ghost_processor", "add_edge"],
+            "recommendation": "Ensure all nodes referenced in add_edge are registered prior to compile()"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Runtime invocation error not caused by graph topology",
+      "category": "runtime_invocation_defect",
+      "inputFile": "validation/test-data/TC-011-runtime-invocation-error.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "uninitialized_state_access",
+            "evidenceContains": ["metadata", "user_role", "KeyError"],
+            "recommendation": "Initialize metadata in upstream node or use state.get('metadata', {})"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Version-incompatible API recommendation or invalid method call",
+      "category": "version_incompatibility",
+      "inputFile": "validation/test-data/TC-012-version-incompatible-api.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "invalid_api_method",
+            "evidenceContains": ["bind_graph_entry", "AttributeError"],
+            "recommendation": "Use verified standard API: builder.add_edge(START, 'work')"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Valid graph using single-file package layout (false-positive prevention)",
+      "category": "package_layout_conventions",
+      "inputFile": "validation/test-data/TC-013-valid-single-file-layout.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "uncertaintyPresent": false,
+        "notes": "Single-file layout is valid and compiles cleanly; no architectural defect"
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": "Apparent unreachable node reachable via conditional path map (false-positive prevention)",
+      "category": "conditional_reachability",
+      "inputFile": "validation/test-data/TC-014-conditional-reachability.py",
+      "expected": {
+        "status": "PASS",
+        "findingsPresent": false,
+        "uncertaintyPresent": false,
+        "notes": "Node is reachable through conditional edge path_map; not an orphaned node"
+      }
+    },
+    {
+      "id": "TC-015",
+      "description": "Potential concern with insufficient evidence (uncertainty handling)",
+      "category": "uncertainty_handling",
+      "inputFile": "validation/test-data/TC-015-insufficient-evidence.py",
+      "expected": {
+        "status": "UNCERTAIN",
+        "findingsPresent": false,
+        "uncertaintyPresent": true,
+        "notes": "External runtime registry not visible; uncertainty recorded without false positive"
+      }
+    },
+    {
+      "id": "TC-016",
+      "description": "Single root-cause defect consolidated rather than duplicated across engineering dimensions",
+      "category": "single_root_cause",
+      "inputFile": "validation/test-data/TC-016-single-root-cause.py",
+      "expected": {
+        "status": "FAIL",
+        "findingsPresent": true,
+        "defects": [
+          {
+            "category": "missing_state_schema_channel",
+            "evidenceContains": ["analysis_report", "RootCauseState"],
+            "recommendation": "Declare 'analysis_report' in RootCauseState schema"
+          }
+        ],
+        "uncertaintyPresent": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "scenario": "parity_verification",
+  "modes": ["local", "entry_guard"],
+  "rules_evaluated": ["SEC01-SEC12", "PERF01-PERF14", "MAINT01-MAINT14", "MOD01-MOD12", "BIZ01-BIZ10"],
+  "scoring_schedule": {
+    "critical": 6.0,
+    "high": 4.0,
+    "medium": 2.0,
+    "low": 1.0
+  },
+  "rubric": {
+    "clean_pass": 10.0,
+    "minor_pass": 9.0,
+    "block_threshold": 9.0
+  },
+  "parity_asserted": true
+}
+

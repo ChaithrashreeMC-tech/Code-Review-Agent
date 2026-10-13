@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LangGraph Graph Construction Test Suite Schema",
+  "type": "object",
+  "required": ["$schema", "suite", "version", "description", "testCases"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "suite": { "type": "string", "const": "langgraph-graph-construction" },
+    "version": { "type": "string" },
+    "description": { "type": "string" },
+    "testCases": {
+      "type": "array",
+      "minItems": 16,
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "category", "inputFile", "expected"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^TC-\\d{3}$" },
+          "description": { "type": "string" },
+          "category": { "type": "string" },
+          "inputFile": { "type": "string" },
+          "expected": {
+            "type": "object",
+            "required": ["status", "findingsPresent"],
+            "properties": {
+              "status": { "type": "string", "enum": ["PASS", "FAIL", "UNCERTAIN"] },
+              "findingsPresent": { "type": "boolean" },
+              "defects": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["category", "evidenceContains"],
+                  "properties": {
+                    "category": { "type": "string" },
+                    "evidenceContains": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "recommendation": { "type": "string" }
+                  }
+                }
+              },
+              "uncertaintyPresent": { "type": "boolean" },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

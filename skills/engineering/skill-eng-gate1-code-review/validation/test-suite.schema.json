@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://code-review-portal.internal/schemas/gate1-test-suite/v1",
+  "title": "Gate1TestSuite",
+  "description": "Schema for Gate 1 Local Code Validation and Review test suite covering all 14 evaluation requirements",
+  "type": "object",
+  "required": ["suite", "version", "description", "testCases"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "suite": {
+      "type": "string",
+      "enum": ["skill-eng-gate1-code-review"]
+    },
+    "version": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "testCases": {
+      "type": "array",
+      "minItems": 14,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "category",
+          "executionMode",
+          "inputs",
+          "expected"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^TC-\\d{3}$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "executionMode": {
+            "type": "string",
+            "enum": ["local", "entry_guard", "both"]
+          },
+          "inputs": {
+            "type": "object",
+            "required": ["repository"],
+            "properties": {
+              "repository": {
+                "type": "object",
+                "required": ["stacks", "changedFiles"],
+                "properties": {
+                  "stacks": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "changedFiles": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "fixturePath": {
+                    "type": "string"
+                  },
+                  "hasUncommitted": {
+                    "type": "boolean"
+                  },
+                  "hasUntracked": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "mockBuild": {
+                "type": "object",
+                "properties": {
+                  "command": { "type": "string" },
+                  "exitCode": { "type": "integer" },
+                  "available": { "type": "boolean" },
+                  "errors": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              },
+              "mockTests": {
+                "type": "object",
+                "properties": {
+                  "command": { "type": "string" },
+                  "exitCode": { "type": "integer" },
+                  "available": { "type": "boolean" },
+                  "total": { "type": "integer" },
+                  "passed": { "type": "integer" },
+                  "failed": { "type": "integer" },
+                  "skipped": { "type": "integer" },
+                  "failures": { "type": "array" }
+                }
+              },
+              "mockDimensions": {
+                "type": "object"
+              }
+            }
+          },
+          "expected": {
+            "type": "object",
+            "required": ["status", "ready_for_pr"],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["PASS", "BLOCKED", "INCOMPLETE"]
+              },
+              "ready_for_pr": {
+                "type": "boolean"
+              },
+              "buildStatus": {
+                "type": "string"
+              },
+              "testStatus": {
+                "type": "string"
+              },
+              "blockingReasonsCount": {
+                "type": "integer"
+              },
+              "nonDestructiveVerified": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -1,0 +1,715 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "skill-eng-gate1-code-review",
+  "version": "1.0.0",
+  "description": "Validation test suite for Gate 1 Local Code Validation and Review Skill. Covers all 14 required capabilities: build/test success/failure, uncommitted changes, polyglot repos, 0-10 scoring, critical overrides, minor passes, tool availability, agent resilience, aggregation, parity, schema compliance, and safety.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Successful local build and passing automated tests with zero violations yields PASS (10/10).",
+      "category": "clean_execution",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/pricing.py"],
+          "fixturePath": "validation/test-data/TC-001-clean-feature.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/pricing.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 12,
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "PASS",
+        "ready_for_pr": true,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Build compilation syntax error immediately yields BLOCKED regardless of tests or review dimensions.",
+      "category": "build_failure",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["TypeScript"],
+          "changedFiles": ["src/user.ts"],
+          "fixturePath": "validation/test-data/TC-002-syntax-error.ts",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "tsc --noEmit",
+          "exitCode": 1,
+          "available": true,
+          "errors": ["src/user.ts(9,42): error TS1002: Unterminated string literal"]
+        },
+        "mockTests": {
+          "command": "npm test",
+          "exitCode": 0,
+          "available": true,
+          "total": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "BLOCKED",
+        "ready_for_pr": false,
+        "buildStatus": "failed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 1
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Automated test suite assertion failure yields BLOCKED with failure details recorded.",
+      "category": "test_failure",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/math.py", "tests/test_math.py"],
+          "fixturePath": "validation/test-data/TC-003-broken-tests.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/math.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/test_math.py",
+          "exitCode": 1,
+          "available": true,
+          "total": 5,
+          "passed": 4,
+          "failed": 1,
+          "skipped": 0,
+          "failures": [
+            {
+              "test_name": "test_divide_positive",
+              "error_message": "AssertionError: 20 != 5.0",
+              "file": "tests/test_math.py"
+            }
+          ]
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "BLOCKED",
+        "ready_for_pr": false,
+        "buildStatus": "passed",
+        "testStatus": "failed",
+        "blockingReasonsCount": 1
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Uncommitted and untracked changes in local working tree are discovered and inspected without requiring a remote PR.",
+      "category": "uncommitted_changes",
+      "executionMode": "local",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/shipping.py"],
+          "fixturePath": "validation/test-data/TC-004-uncommitted-feature.py",
+          "hasUncommitted": true,
+          "hasUntracked": true
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/shipping.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 8,
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "PASS",
+        "ready_for_pr": true,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Polyglot repository with Python backend and React frontend activates multi-stack inspection and review.",
+      "category": "polyglot_repository",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python", "TypeScript", "React"],
+          "changedFiles": ["api/products.py", "web/ProductView.tsx"],
+          "fixturePath": "validation/test-data/TC-005-polyglot-backend.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile api/products.py && npm run build",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest api/ && npm test",
+          "exitCode": 0,
+          "available": true,
+          "total": 24,
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "PASS",
+        "ready_for_pr": true,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-006",
+      "description": "Maintainability dimension score below 9.0 (score = 6.0 due to high complexity) blocks PR readiness.",
+      "category": "dimension_score_block",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/orders.py"],
+          "fixturePath": "validation/test-data/TC-006-high-complexity.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/orders.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 10,
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": {
+            "score": 6.0,
+            "blocked": true,
+            "findings": [
+              {
+                "ruleId": "MAINT02",
+                "title": "Deeply nested control flow (nesting depth 7)",
+                "severity": "high",
+                "confidence": "high",
+                "file": "src/orders.py",
+                "lineStart": 2,
+                "evidence": "Nesting depth 7 exceeds limit of 3",
+                "impact": "Severely harms readability and testability",
+                "recommendation": "Refactor nested loops with guard clauses"
+              }
+            ]
+          },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "BLOCKED",
+        "ready_for_pr": false,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 1
+      }
+    },
+    {
+      "id": "TC-007",
+      "description": "Confirmed critical security finding (SEC01 SQL Injection) triggers unconditional BLOCKED status.",
+      "category": "critical_override",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/auth.py"],
+          "fixturePath": "validation/test-data/TC-007-sqli-vulnerability.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/auth.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 15,
+          "passed": 15,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": {
+            "score": 4.0,
+            "blocked": true,
+            "findings": [
+              {
+                "ruleId": "SEC01",
+                "title": "SQL Injection in User Lookup",
+                "severity": "critical",
+                "confidence": "high",
+                "file": "src/auth.py",
+                "lineStart": 7,
+                "evidence": "Raw email string interpolated directly into SQL query",
+                "impact": "Allows arbitrary SQL execution and data breach",
+                "recommendation": "Use parameterized query bindings"
+              }
+            ]
+          },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "BLOCKED",
+        "ready_for_pr": false,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 1
+      }
+    },
+    {
+      "id": "TC-008",
+      "description": "Permitted 9.0/10 result with at most one minor finding and zero criticals produces PASS.",
+      "category": "minor_pass",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/label.py"],
+          "fixturePath": "validation/test-data/TC-008-minor-comment-change.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/label.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 6,
+          "passed": 6,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": {
+            "score": 9.0,
+            "blocked": false,
+            "findings": [
+              {
+                "ruleId": "MAINT03",
+                "title": "Minor naming abbreviation",
+                "severity": "low",
+                "confidence": "high",
+                "file": "src/label.py",
+                "lineStart": 3,
+                "evidence": "Short variable 'lbl' used for item label",
+                "impact": "Minor readability smell",
+                "recommendation": "Rename 'lbl' to 'formatted_label'"
+              }
+            ]
+          },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "PASS",
+        "ready_for_pr": true,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-009",
+      "description": "Unavailable build toolchain or test runner results in INCOMPLETE status instead of false pass.",
+      "category": "tool_availability",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Rust"],
+          "changedFiles": ["src/main.rs"],
+          "fixturePath": "validation/test-data/TC-009-missing-toolchain.json",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "cargo check",
+          "exitCode": 127,
+          "available": false,
+          "errors": ["cargo: command not found"]
+        },
+        "mockTests": {
+          "command": "cargo test",
+          "exitCode": 127,
+          "available": false,
+          "total": 0,
+          "passed": 0,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "INCOMPLETE",
+        "ready_for_pr": false,
+        "buildStatus": "unavailable",
+        "testStatus": "unavailable",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-010",
+      "description": "Partial sub-agent failure / timeout records uncertainty note and marks overall status INCOMPLETE.",
+      "category": "agent_resilience",
+      "executionMode": "entry_guard",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/service.py"],
+          "fixturePath": "validation/test-data/TC-010-subagent-timeout.json",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/service.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 10,
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": {
+            "score": 10.0,
+            "blocked": false,
+            "findings": [],
+            "uncertainty_notes": ["Sub-agent timed out after 30s; business logic validation incomplete"]
+          }
+        }
+      },
+      "expected": {
+        "status": "INCOMPLETE",
+        "ready_for_pr": false,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-011",
+      "description": "Multi-layer finding symptoms sharing single root cause are deduplicated into one primary finding.",
+      "category": "deduplication",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/controllers/order.py"],
+          "fixturePath": "validation/test-data/TC-011-cross-layer-dup.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/controllers/order.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": {
+            "score": 6.0,
+            "blocked": true,
+            "findings": [
+              {
+                "ruleId": "MOD08",
+                "title": "Raw database update inside controller handler",
+                "severity": "high",
+                "confidence": "high",
+                "file": "src/controllers/order.py",
+                "lineStart": 6,
+                "evidence": "Direct SQL cursor call inside HTTP handler",
+                "impact": "Violates layer separation and prevents isolated unit testing",
+                "recommendation": "Move SQL query to OrderRepository and invoke from OrderService"
+              }
+            ]
+          },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "BLOCKED",
+        "ready_for_pr": false,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 1
+      }
+    },
+    {
+      "id": "TC-012",
+      "description": "Local Developer Mode and Entry Guard Agent Mode produce identical scores and blocking decisions.",
+      "category": "parity_verification",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/feature.py"],
+          "fixturePath": "validation/test-data/TC-012-parity-runner.json",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/feature.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 15,
+          "passed": 15,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "PASS",
+        "ready_for_pr": true,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-013",
+      "description": "Validation report generation strictly conforms to the JSON report schema and Markdown layout.",
+      "category": "report_schema_validation",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python", "TypeScript"],
+          "changedFiles": ["src/tax_engine.py"],
+          "fixturePath": "validation/test-data/TC-013-full-report-fixture.json",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "ruff check . && mypy src/",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 35,
+          "passed": 35,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "PASS",
+        "ready_for_pr": true,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0
+      }
+    },
+    {
+      "id": "TC-014",
+      "description": "Safety invariant: Gate 1 never mutates source files or creates remote git commits/pushes.",
+      "category": "safety_and_non_destructive",
+      "executionMode": "both",
+      "inputs": {
+        "repository": {
+          "stacks": ["Python"],
+          "changedFiles": ["src/interest.py"],
+          "fixturePath": "validation/test-data/TC-014-safety-check.py",
+          "hasUncommitted": true,
+          "hasUntracked": false
+        },
+        "mockBuild": {
+          "command": "python -m py_compile src/interest.py",
+          "exitCode": 0,
+          "available": true,
+          "errors": []
+        },
+        "mockTests": {
+          "command": "pytest tests/",
+          "exitCode": 0,
+          "available": true,
+          "total": 5,
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "failures": []
+        },
+        "mockDimensions": {
+          "security": { "score": 10.0, "blocked": false, "findings": [] },
+          "performance": { "score": 10.0, "blocked": false, "findings": [] },
+          "maintainability": { "score": 10.0, "blocked": false, "findings": [] },
+          "modularity": { "score": 10.0, "blocked": false, "findings": [] },
+          "business_logic": { "score": 10.0, "blocked": false, "findings": [] }
+        }
+      },
+      "expected": {
+        "status": "PASS",
+        "ready_for_pr": true,
+        "buildStatus": "passed",
+        "testStatus": "passed",
+        "blockingReasonsCount": 0,
+        "nonDestructiveVerified": true
+      }
+    }
+  ]
+}
+

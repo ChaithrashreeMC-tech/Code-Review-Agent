@@ -1,0 +1,56 @@
+{
+  "gate": "GATE_1_LOCAL",
+  "timestamp": "2026-10-13T11:45:00Z",
+  "status": "PASS",
+  "ready_for_pr": true,
+  "repository": {
+    "root": "/workspace/my-service",
+    "branch": "feature/tax-engine",
+    "commit_sha": "a1b2c3d4",
+    "stacks": ["Python", "TypeScript"],
+    "changed_files": [
+      {
+        "path": "src/tax_engine.py",
+        "status": "modified",
+        "lines_added": 24,
+        "lines_removed": 2
+      }
+    ]
+  },
+  "build_and_static": {
+    "status": "passed",
+    "command": "ruff check . && mypy src/",
+    "duration_ms": 420,
+    "errors": [],
+    "warnings": []
+  },
+  "automated_tests": {
+    "status": "passed",
+    "command": "pytest tests/",
+    "total": 35,
+    "passed": 35,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 1150,
+    "failures": []
+  },
+  "dimensions": {
+    "security": { "score": 10.0, "blocked": false, "findings": [], "uncertainty_notes": [] },
+    "performance": { "score": 10.0, "blocked": false, "findings": [], "uncertainty_notes": [] },
+    "maintainability": { "score": 10.0, "blocked": false, "findings": [], "uncertainty_notes": [] },
+    "modularity": { "score": 10.0, "blocked": false, "findings": [], "uncertainty_notes": [] },
+    "business_logic": { "score": 10.0, "blocked": false, "findings": [], "uncertainty_notes": [] }
+  },
+  "summary": {
+    "total_findings": 0,
+    "critical_count": 0,
+    "high_count": 0,
+    "medium_count": 0,
+    "low_count": 0,
+    "average_score": 10.0
+  },
+  "blocking_reasons": [],
+  "uncertainty_notes": [],
+  "remediation_items": []
+}
+
