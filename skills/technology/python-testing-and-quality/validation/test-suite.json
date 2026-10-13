@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "suite": "python-testing-and-quality",
+  "version": "1.0.0",
+  "description": "Validation test cases for Python testing practices, mock isolation, async test patterns, and code quality tools.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Detect unmocked external side-effects in unit test",
+      "category": "mocking",
+      "technology": "python-testing-and-quality",
+      "inputFile": "validation/test-data/TC-001-unmocked-side-effect.py",
+      "targetSymbol": "test_process_payment_unmocked",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "TST01",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["requests.post", "unmocked", "side-effect"]
+          }
+        ],
+        "notes": "Unmocked HTTP side-effects in unit tests break isolation and test reliability."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "test_process_payment_mocked",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses mocker fixture to cleanly mock requests.post."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Detect assertion-free test functions",
+      "category": "assertions",
+      "technology": "python-testing-and-quality",
+      "inputFile": "validation/test-data/TC-002-assertion-free-test.py",
+      "targetSymbol": "test_calculate_metrics_no_assert",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "TST02",
+            "severity": "MEDIUM",
+            "confidence": "HIGH",
+            "evidenceContains": ["calculate_total", "no assertions", "assertion-free"]
+          }
+        ],
+        "notes": "Tests without assertions fail to verify correct behavior."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "test_calculate_metrics_with_assert",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Verifies result using explicit assert statement."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Detect missing pytest.mark.asyncio decorator on async test function",
+      "category": "async-testing",
+      "technology": "python-testing-and-quality",
+      "inputFile": "validation/test-data/TC-003-async-test-decorator.py",
+      "targetSymbol": "test_async_fetch_missing_mark",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "TST03",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["async def", "pytest.mark.asyncio", "missing decorator"]
+          }
+        ],
+        "notes": "Async test functions without pytest.mark.asyncio may be skipped or fail silently."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "test_async_fetch_with_mark",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Annotated with @pytest.mark.asyncio for proper async execution."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Detect security linter violation (eval usage)",
+      "category": "security-lint",
+      "technology": "python-testing-and-quality",
+      "inputFile": "validation/test-data/TC-004-security-lint.py",
+      "targetSymbol": "execute_dynamic_script_insecure",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "TST04",
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "evidenceContains": ["eval", "security", "S307"]
+          }
+        ],
+        "notes": "eval() allows arbitrary code execution and triggers security linter alerts."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "execute_dynamic_script_secure",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Uses ast.literal_eval for safe dynamic evaluation."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Verify clean passing pytest test case with fixtures",
+      "category": "valid-suite",
+      "technology": "python-testing-and-quality",
+      "inputFile": "validation/test-data/TC-005-valid-pytest-suite.py",
+      "targetSymbol": "test_valid_user_creation",
+      "expected": {
+        "findingsPresent": false,
+        "notes": "Clean pytest test case utilizing fixtures and assertions correctly."
+      }
+    }
+  ]
+}
+
