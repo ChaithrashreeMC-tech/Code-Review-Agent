@@ -1,0 +1,144 @@
+{
+  "$schema": "./test-suite.schema.json",
+  "suite": "dotnet-backend-review",
+  "version": "1.0.0",
+  "description": "Validation test suite for .NET Backend Code Review skill rule detection and safe code counterpart analysis.",
+  "testCases": [
+    {
+      "id": "TC-001",
+      "description": "Verify detection of captive dependency where Singleton holds Scoped DbContext directly.",
+      "category": "modularity",
+      "technology": "ASP.NET Core DI",
+      "inputFile": "validation/test-data/TC-001-modularity-captive-dependency.cs",
+      "targetSymbol": "CaptiveDependencyViolation",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "DOTNET-MOD-001",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["AppDbContext", "_db"]
+          }
+        ],
+        "notes": "Singleton class receives Scoped AppDbContext directly in constructor without IServiceScopeFactory."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "SafeScopeFactoryPattern",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Class uses IServiceScopeFactory to safely create a short-lived scope for Scoped DbContext access."
+        }
+      }
+    },
+    {
+      "id": "TC-002",
+      "description": "Verify detection of unmanaged resource leak where FileStream is not disposed.",
+      "category": "maintainability",
+      "technology": "C# IDisposable",
+      "inputFile": "validation/test-data/TC-002-maintainability-resource-leak.cs",
+      "targetSymbol": "UnmanagedResourceLeak",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "DOTNET-MAINT-003",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["File.OpenRead", "stream"]
+          }
+        ],
+        "notes": "FileStream instance is not wrapped in a using declaration or block."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "SafeUsingDeclaration",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "FileStream is safely managed with an await using declaration."
+        }
+      }
+    },
+    {
+      "id": "TC-003",
+      "description": "Verify detection of sync-over-async blocking via Task.GetAwaiter().GetResult().",
+      "category": "performance",
+      "technology": ".NET Async Execution",
+      "inputFile": "validation/test-data/TC-003-performance-sync-over-async.cs",
+      "targetSymbol": "SyncOverAsyncBlocking",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "DOTNET-PERF-001",
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "evidenceContains": ["GetAwaiter().GetResult()"]
+          }
+        ],
+        "notes": "Synchronous method blocks thread pool thread using GetAwaiter().GetResult()."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "SafeAsyncAwaitPattern",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Method uses non-blocking async/await execution."
+        }
+      }
+    },
+    {
+      "id": "TC-004",
+      "description": "Verify detection of SQL injection vulnerability via string concatenation in raw SQL.",
+      "category": "security",
+      "technology": "EF Core Data Protection",
+      "inputFile": "validation/test-data/TC-004-security-efcore-raw-sql.cs",
+      "targetSymbol": "UnsafeRawSqlInjection",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "DOTNET-SEC-004",
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "evidenceContains": ["FromSqlRaw", "userInput"]
+          }
+        ],
+        "notes": "Raw SQL query uses string concatenation with unsanitized user input."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "SafeSqlInterpolatedPattern",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Query uses FromSqlInterpolated which automatically parameterizes SQL inputs."
+        }
+      }
+    },
+    {
+      "id": "TC-005",
+      "description": "Verify detection of HTTP contract mismatch returning 200 OK with error payload.",
+      "category": "business-logic",
+      "technology": "ASP.NET Core API",
+      "inputFile": "validation/test-data/TC-005-business-logic-contract-mismatch.cs",
+      "targetSymbol": "Http200ErrorPayloadMismatch",
+      "expected": {
+        "findingsPresent": true,
+        "findings": [
+          {
+            "ruleId": "DOTNET-BIZ-001",
+            "severity": "MEDIUM",
+            "confidence": "HIGH",
+            "evidenceContains": ["ApiResponse", "Success = false"]
+          }
+        ],
+        "notes": "Validation failure returns success=false payload rather than standard HTTP error status code."
+      },
+      "safeCounterpart": {
+        "targetSymbol": "SafeProblemDetailsContract",
+        "expected": {
+          "findingsPresent": false,
+          "notes": "Validation failure returns standard ProblemDetails contract."
+        }
+      }
+    }
+  ]
+}
+
