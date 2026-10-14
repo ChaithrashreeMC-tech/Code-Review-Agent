@@ -33,11 +33,8 @@ def run_validations():
             errors.append("SKILL.md frontmatter name missing or invalid")
             
         for ref in [
-            "state-schema-design.md",
-            "reducers-and-state-updates.md",
-            "checkpointing-and-thread-isolation.md",
-            "persistence-and-execution-recovery.md",
-            "state-security-and-testing.md"
+            "checklist.md",
+            "architecture-and-patterns.md"
         ]:
             if ref in content:
                 print(f"  [PASS] References supporting document: {ref}")
@@ -47,11 +44,8 @@ def run_validations():
     # 2. Validate references/
     print("\n=== VALIDATION: references/ ===")
     required_refs = [
-        "state-schema-design.md",
-        "reducers-and-state-updates.md",
-        "checkpointing-and-thread-isolation.md",
-        "persistence-and-execution-recovery.md",
-        "state-security-and-testing.md"
+        "checklist.md",
+        "architecture-and-patterns.md"
     ]
     for r in required_refs:
         ref_path = os.path.join(references_dir, r)

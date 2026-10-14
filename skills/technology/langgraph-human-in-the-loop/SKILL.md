@@ -13,8 +13,8 @@ description: >-
 This skill provides technical domain knowledge for architecting, validating, reviewing, and testing Human-in-the-Loop (HITL) workflows in LangGraph Python applications.
 
 **Activate when tasks involve:**
-- Introducing human approval, rejection, or review gates into a LangGraph workflow (`interrupt()`, `NodeInterrupt`, or interrupt-before/after).
-- Handling graph pause and resumption (`Command(resume=...)` or state update resumptions).
+- Introducing human approval, rejection, or review gates into a LangGraph workflow (`interrupt()`, `Command(resume=...)`).
+- Handling graph pause and resumption with thread and checkpoint state.
 - Processing reviewer decisions: approve, reject, request changes, or supply edited inputs.
 - Validating and sanitizing human-provided resume values before continuing graph execution.
 - Managing checkpoint-backed paused executions, thread ownership, and multi-tenant authorization.
@@ -56,15 +56,22 @@ flowchart LR
 
 ---
 
-## 3. Reference Map
+## 3. Human-in-the-Loop Rules & Checklist
 
-| Sub-Task | Reference Document | Focus Areas |
+| ID | Rule Name | Objective |
 |---|---|---|
-| **Interrupts & Resume** | [`references/interrupts-and-resume.md`](references/interrupts-and-resume.md) | `interrupt()` function, pause detection, passing resume values via `Command(resume=...)`, validation contracts, multi-stage interrupts. |
-| **Approval Workflow Design** | [`references/approval-workflow-design.md`](references/approval-workflow-design.md) | Approve, reject, request-changes flows, structured decision schemas, sequential vs parallel reviewers, explicit non-approval branches. |
-| **Lifecycle & Checkpointing** | [`references/checkpointing-and-execution-lifecycle.md`](references/checkpointing-and-execution-lifecycle.md) | Checkpoint association, process restarts while paused, duplicate resume protection, expiration/cancellation, application vs graph status. |
-| **Security & Authorization** | [`references/security-and-authorization.md`](references/security-and-authorization.md) | Reviewer auth, tenant isolation, preventing execution hijacking, server-side decision validation, immutable audit trails. |
-| **Testing & Recovery** | [`references/hitl-testing-and-recovery.md`](references/hitl-testing-and-recovery.md) | Testing approval/rejection/timeout paths, deterministic mocking, verifying side-effect idempotency on retry, regression tests. |
+| `HITL01` | Explicit Interrupt Mechanics | Use `interrupt(payload)` to pause graph execution; provide structured context for human review. |
+| `HITL02` | Validated Resumption | Resume execution via `Command(resume=...)` targeting explicit `thread_id` and checkpoint state. |
+| `HITL03` | Approval & Rejection Branching | Explicitly branch on human decisions; ensure rejection terminates or routes away from protected actions. |
+| `HITL04` | Resume Payload Validation | Validate human decisions and edited inputs with Pydantic schemas or Enums before applying to state. |
+| `HITL05` | Resume Authorization & RBAC | Enforce caller authentication and approval permissions prior to processing resume payloads. |
+| `HITL06` | Multi-Tenant Resume Boundary | Enforce tenant isolation to prevent unauthorized cross-tenant thread resumption. |
+| `HITL07` | Approval Expiry & Lifecycle | Reject expired or cancelled approval requests before resuming protected operations. |
+| `HITL08` | Idempotency & Side-Effect Safety | Attach idempotency keys to external side effects following interrupt resumption to prevent duplicate executions. |
+| `HITL09` | Audit Trail Recording | Record immutable audit logs capturing reviewer identity, timestamp, thread ID, and decision rationale. |
+| `HITL10` | Business vs Execution Status | Distinguish domain approval outcome (`REJECTED`) from technical graph execution status (`COMPLETED`). |
+
+*Detailed criteria, evidence patterns, and remediation per rule are defined in [`references/checklist.md`](references/checklist.md).*
 
 ---
 
@@ -79,8 +86,7 @@ When designing, implementing, or reviewing LangGraph HITL workflows, follow thes
 - **Retries Must Not Duplicate Side Effects:** Checkpointing resumes graph state, not external transaction status. Operations following approval must use idempotency keys to prevent duplicate executions upon process recovery or duplicate submissions.
 - **Application Status vs Graph Status:** Do not conflate business lifecycle states (`pending_review`, `rejected`, `expired`) with LangGraph execution/checkpoint states. Maintain distinct application records where required.
 - **Untrusted Human Input:** Treat reviewer-supplied text or edited arguments as untrusted. Validate constraints and sanitize content before feeding it downstream into tools or prompt contexts.
-- **Approval Proportionality:** Do not mandate interrupts or human approvals for low-risk, read-only, or automated workflows. Evaluate necessity based on the operation's real-world consequences.
-- **Consolidate Root Causes:** Report multiple symptoms stemming from a single approval or interrupt defect as one unified root-cause finding.
+- **Evidence-Based Review:** Report confirmed HITL defects with concrete file and line citations. Record uncertainty when evidence is incomplete.
 
 ---
 
@@ -96,3 +102,10 @@ This skill supplies human-in-the-loop domain expertise and delegates finding cla
    - **Modularity** ([`skill-eng-modularity`](../../engineering/skill-eng-modularity/SKILL.md)): Direct coupling between graph nodes and approval UI models, bypassing Application-layer review services.
 3. **Delegate Scoring**: Use the platform's native 0–10 scale and Gate policies; never invent local scoring rubrics.
 
+---
+
+## 6. Supporting References
+
+- **Inspection Checklist**: [`references/checklist.md`](references/checklist.md) — Detailed criteria, code patterns, detection, and remediation per rule.
+- **Architecture & Patterns**: [`references/architecture-and-patterns.md`](references/architecture-and-patterns.md) — Interrupt mechanics, approval topologies, authorization, and idempotency.
+- **Validation Suite**: [`validation/test-suite.json`](validation/test-suite.json) — Automated test cases for detection and false-positive verification.

@@ -1,32 +1,31 @@
 ---
 name: langgraph-tools-and-runtime
 description: >-
-  Activate when designing, implementing, reviewing, debugging, or testing LangGraph tool definitions,
-  model-tool binding, ToolNode execution, runtime context injection (RunnableConfig), tool error/retry
-  handling, idempotency, side-effect safety, and tool-level security in Python.
+  Activate when defining, binding, executing, reviewing, or testing tools in LangGraph and LangChain in Python.
+  Focuses on tool schema definitions (Pydantic, typing), model-tool binding (bind_tools), ToolNode execution flow,
+  runtime context injection (RunnableConfig, InjectedToolArg), error classification, retry policies, tool security
+  (authorization, tenant isolation, prompt injection defense), and deterministic unit testing.
 ---
 
 # LangGraph Tools & Runtime
 
 ## 1. Purpose & Activation
 
-This skill provides technical domain knowledge for architecting, reviewing, debugging, and testing tool definitions, model-tool binding, `ToolNode` execution flows, runtime configuration and dependency injection, error/retry policies, and tool boundary security in Python LangGraph applications.
+This skill provides technical domain knowledge for defining, binding, executing, securing, and testing tools within LangGraph agent workflows in Python.
 
 **Activate when tasks involve:**
-- Declaring and typing tools using `@tool`, `StructuredTool`, Pydantic schemas, or schema contracts.
-- Binding tools to chat models (`llm.bind_tools(tools)` or provider equivalents) and managing tool calling.
-- Configuring and integrating `ToolNode` or custom tool execution nodes into LangGraph workflows.
-- Handling runtime context, `RunnableConfig`, tenant context, and dependency injection in tool invocations.
-- Designing error handling, retry policies, backoff, timeouts, and fallbacks for external tool failures.
-- Managing tool side effects, duplicate execution prevention, and idempotency across retries or replays.
-- Securing tool interfaces: input validation, least privilege, authorization checks, and sensitive data masking.
-- Testing tool implementations, tool routing, and mock execution deterministically.
+- Defining type-safe tool schemas with Pydantic (`args_schema`) and parameter docstrings.
+- Binding tools to chat models (`llm.bind_tools(tools)`) and routing calls via `ToolNode` and `tools_condition`.
+- Passing runtime context, tenant identifiers, and injected dependencies via `RunnableConfig` or `InjectedToolArg`.
+- Implementing structured tool error handling, transient vs. permanent error classification, and bounded retries.
+- Enforcing security boundaries on tool execution: authorization checks, tenant scoping, and prompt injection defenses.
+- Writing deterministic unit and integration tests for tools with test doubles.
 
 **Do NOT activate solely because:**
-- A repository uses standard Python functions, REST endpoints, or database queries without LangGraph tool integration.
-- The task focuses strictly on graph compilation, edges, or node routing topology (delegate to `langgraph-graph-construction`).
-- The task focuses strictly on state schemas, reducers, checkpointing, or thread persistence (delegate to `langgraph-state-and-persistence`).
-- The task focuses strictly on multi-agent supervisor coordination (delegate to `langgraph-agent-orchestration`).
+- The task is about multi-agent supervisor topologies or package layouts (delegate to `langgraph-agent-orchestration`).
+- The task focuses strictly on graph compilation, edge topology, or unreachable nodes (delegate to `langgraph-graph-construction`).
+- The task is strictly about database checkpointing and persistence (delegate to `langgraph-state-and-persistence`).
+- The task is strictly about human approval pauses or interrupts (delegate to `langgraph-human-in-the-loop`).
 
 ---
 
@@ -35,18 +34,19 @@ This skill provides technical domain knowledge for architecting, reviewing, debu
 ```mermaid
 flowchart LR
     subgraph InScope [" LangGraph Tools & Runtime (This Skill)"]
-        ToolDef["Tool Definition & Model Binding"]
-        ToolExec["ToolNode & Execution Flow"]
-        Context["Runtime Context & Dependency Injection"]
-        Errors["Error Handling, Retries & Idempotency"]
-        ToolSec["Tool Boundary Security & Testing"]
+        ToolDef["Tool Schema Definition & Validation"]
+        Binding["Model-Tool Binding & ToolNode Execution"]
+        RuntimeCtx["Runtime Context & Dependency Injection"]
+        Errors["Error Handling & Bounded Retries"]
+        Security["Tool Security: Auth, Tenant Isolation & Sanitization"]
     end
 
     subgraph Boundaries [" Delegated Responsibilities"]
-        GraphConst["Graph Construction -> Graph Edges, Cycles & Compilation"]
-        StatePersist["State & Persistence -> State Schemas, Reducers & Checkpointing"]
-        AgentOrch["Agent Orchestration -> Multi-Agent Supervisors & Clean Arch Layout"]
-        EngSkills["Engineering Skills -> Finding Classification, 0-10 Scores & Gate Policy"]
+        Orch["Agent Orchestration -> Multi-Agent Topologies & Handoffs"]
+        GraphConst["Graph Construction -> State Schemas & Compilation"]
+        Persist["State & Persistence -> Database Checkpointers"]
+        HITL["Human-in-the-Loop -> Interrupt & Resume Mechanics"]
+        Eng["Engineering Skills -> Finding Classification & 0-10 Scores"]
     end
 
     InScope -.-> Boundaries
@@ -54,42 +54,53 @@ flowchart LR
 
 ---
 
-## 3. Reference Map
+## 3. Tools & Runtime Rules & Checklist
 
-| Sub-Task | Reference Document | Focus Areas |
+| ID | Rule Name | Objective |
 |---|---|---|
-| **Tool Definition & Binding** | [`references/tool-definition-and-binding.md`](references/tool-definition-and-binding.md) | `@tool` decorator, Pydantic input schemas, docstrings/descriptions, `bind_tools`, handling unknown/malformed tool calls. |
-| **ToolNode & Execution Flow** | [`references/toolnode-and-execution-flow.md`](references/toolnode-and-execution-flow.md) | `ToolNode` mechanics, `ToolMessage` association by `tool_call_id`, parallel tool execution, tool-to-model return loop vs deterministic nodes. |
-| **Runtime Context & Dependencies** | [`references/runtime-context-and-dependencies.md`](references/runtime-context-and-dependencies.md) | `RunnableConfig`, `InjectedToolArg`, tenant isolation, application-layer service delegation, avoiding ad-hoc DB connections in tools. |
-| **Tool Errors & Retry Policies** | [`references/tool-errors-and-retry-policies.md`](references/tool-errors-and-retry-policies.md) | Retryable vs non-retryable errors, bounded retries, backoff, timeouts, idempotency keys, tool result errors vs graph exceptions. |
-| **Tool Security & Testing** | [`references/tool-security-and-testing.md`](references/tool-security-and-testing.md) | Argument validation, untrusted tool output / prompt injection defense, least privilege, secret masking, deterministic mocking. |
+| `TOOL01` | Explicit Tool Schema Definition | Define tools with explicit Pydantic `args_schema` or type annotations; forbid untyped parameters. |
+| `TOOL02` | Model Binding & Registration | Ensure all tools bound to the model (`bind_tools`) are registered in the corresponding `ToolNode`. |
+| `TOOL03` | Tool Message Association | Ensure every `ToolMessage` matches a valid `tool_call_id` from the preceding `AIMessage.tool_calls`. |
+| `TOOL04` | Runtime Context Validation | Safely access `RunnableConfig` (`config.get("configurable", {})`) without raw key access. |
+| `TOOL05` | Injected Tool Dependencies | Inject external services and repositories into tools via runtime config or closures; avoid global singletons. |
+| `TOOL06` | Authorization Boundaries | Verify caller permissions before executing destructive or sensitive operations in tool bodies. |
+| `TOOL07` | Tenant Context Protection | Retrieve `tenant_id` from authenticated runtime context (`config`), never from model-generated arguments. |
+| `TOOL08` | Error Classification & Retries | Differentiate transient network errors from permanent client errors; enforce bounded retry policies. |
+| `TOOL09` | Output Sanitization & Security | Redact secrets and mask raw external payloads to prevent prompt injection and data leaks. |
+| `TOOL10` | Isolated Tool Unit Testing | Test tool logic, schema validation, and error branches directly using mock clients and unit tests. |
+
+*Detailed criteria, evidence patterns, and remediation per rule are defined in [`references/checklist.md`](references/checklist.md).*
 
 ---
 
 ## 4. Architectural Rules & False-Positive Safeguards
 
-When designing, implementing, or reviewing LangGraph tools and runtime execution, follow these guidelines:
+When designing, implementing, or reviewing LangGraph tools and runtime, follow these guidelines:
 
-- **Tools are Adapters, Not Handlers:** In applications with layered architecture, tools must act as thin adapters delegating to Application-layer service handlers. Tools must not execute raw database queries or direct infrastructure mutations directly.
-- **Model Request vs. Runtime Execution:** The model proposing a tool call (`tool_calls`) does NOT execute it. Execution happens only when routed through a `ToolNode` or dedicated tool execution node that yields matching `ToolMessage` outputs with the same `tool_call_id`.
-- **ToolNode vs Deterministic Direct Nodes:** A workflow that invokes tools or services deterministically through ordinary graph nodes without an LLM tool-calling loop is NOT a defect. Do NOT mandate `ToolNode` for deterministic pipelines.
-- **Approval Proportionality:** Human approval or confirmation gates are required only for high-consequence operations (e.g. destructive actions, payments, external mutations). Do NOT flag read-only or low-impact tools for lacking human approval.
-- **Runtime Context Separation:** Distinguish graph state channels (domain data) from runtime configuration (`RunnableConfig`, credentials, tenant metadata). Do not leak runtime credentials into persistent graph state channels.
-- **Retry Idempotency:** Checkpointing and graph retries recover execution state, not external side effects. Ensure any retried tool performing external modifications uses idempotency keys or pre-execution deduplication checks.
-- **Version Compatibility:** Verify runtime APIs (e.g., `InjectedToolArg`, `ToolNode`, `bind_tools`) against the installed LangChain/LangGraph version rather than assuming universal syntax across versions.
-- **Consolidate Root Causes:** Report multiple symptoms arising from the same underlying tool definition or binding defect as a single root-cause finding.
+- **Explicit Contracts:** Define clear parameter names, types, and descriptions so LLMs generate valid arguments.
+- **Tenant Context Security:** Always extract tenant and user identities from authenticated runtime context (`RunnableConfig`), never from model arguments.
+- **Error Classification:** Do not retry permanent client errors (HTTP 400/404/validation errors). Apply exponential backoff only to transient network faults.
+- **Output Sanitization:** Sanitize external web data and mask API tokens before injecting outputs into the message stream.
+- **Evidence-Based Review:** Report confirmed tool defects with concrete file and line citations. Record uncertainty when evidence is incomplete.
 
 ---
 
 ## 5. Engineering Skill Integration
 
-This skill supplies tool and runtime domain expertise and delegates finding classification, scoring, and blocking to standard Engineering Skills:
-1. **Identify Tool/Runtime Defect**: Pinpoint the concrete defect with line and file evidence.
+This skill supplies tool execution domain expertise and delegates finding classification, scoring, and blocking to standard Engineering Skills:
+1. **Identify Tool Defect**: Pinpoint the concrete defect with line and file evidence.
 2. **Map to Applicable Engineering Dimension**:
-   - **Modularity** ([`skill-eng-modularity`](../../engineering/skill-eng-modularity/SKILL.md)): Tools executing raw database queries or bypassing Application-layer handlers.
-   - **Maintainability** ([`skill-eng-maintainability`](../../engineering/skill-eng-maintainability/SKILL.md)): Untyped tool schemas, missing parameter docstrings, unassociated tool call IDs.
-   - **Performance** ([`skill-eng-performance`](../../engineering/skill-eng-performance/SKILL.md)): Creating new database connections or HTTP clients per tool call, unbounded tool retry loops.
-   - **Security** ([`skill-eng-security`](../../engineering/skill-eng-security/SKILL.md)): Missing authorization checks in tools, cross-tenant data leakage, credentials exposed in tool output, unvalidated tool inputs.
-   - **Business Logic** ([`skill-eng-business-logic`](../../engineering/skill-eng-business-logic/SKILL.md)): Non-idempotent tool execution retried on failure, unregistered tool requested by model without fallback.
-3. **Delegate Scoring**: Use the platform's native 0–10 scale and Gate policies; never invent local scoring rubrics.
+   - **Security** ([`skill-eng-security`](../../engineering/skill-eng-security/SKILL.md)): Missing tool authorization, cross-tenant data access, prompt injection.
+   - **Maintainability** ([`skill-eng-maintainability`](../../engineering/skill-eng-maintainability/SKILL.md)): Untyped tool arguments, missing tool docstrings.
+   - **Performance** ([`skill-eng-performance`](../../engineering/skill-eng-performance/SKILL.md)): Unbounded retry loops, blocking synchronous I/O inside async tools.
+   - **Modularity** ([`skill-eng-modularity`](../../engineering/skill-eng-modularity/SKILL.md)): Uninjected global service instances, bypassed application handlers.
+   - **Business Logic** ([`skill-eng-business-logic`](../../engineering/skill-eng-business-logic/SKILL.md)): Fabricated tool results, unhandled tool error states.
+3. **Delegate Scoring**: Use the platform's native 0–10 scale and Gate policies.
 
+---
+
+## 6. Supporting References
+
+- **Inspection Checklist**: [`references/checklist.md`](references/checklist.md) — Detailed criteria, code patterns, detection, and remediation per rule.
+- **Architecture & Patterns**: [`references/architecture-and-patterns.md`](references/architecture-and-patterns.md) — Tool schemas, model binding, runtime context, and security.
+- **Validation Suite**: [`validation/test-suite.json`](validation/test-suite.json) — Automated test cases for detection and false-positive verification.

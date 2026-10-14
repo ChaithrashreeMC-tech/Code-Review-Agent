@@ -55,11 +55,8 @@ def run_validations():
             errors.append("SKILL.md frontmatter name missing or invalid")
             
         for ref in [
-            "graph-package-architecture.md",
-            "agent-topologies-and-coordination.md",
-            "application-layer-tool-bridging.md",
-            "model-provider-abstraction.md",
-            "orchestration-testing-and-guardrails.md"
+            "checklist.md",
+            "architecture-and-patterns.md"
         ]:
             if ref in content:
                 print(f"  [PASS] References supporting document: {ref}")
@@ -69,11 +66,8 @@ def run_validations():
     # 2. Validate references/
     print("\n=== VALIDATION: references/ ===")
     required_refs = [
-        "graph-package-architecture.md",
-        "agent-topologies-and-coordination.md",
-        "application-layer-tool-bridging.md",
-        "model-provider-abstraction.md",
-        "orchestration-testing-and-guardrails.md"
+        "checklist.md",
+        "architecture-and-patterns.md"
     ]
     for r in required_refs:
         ref_path = os.path.join(references_dir, r)

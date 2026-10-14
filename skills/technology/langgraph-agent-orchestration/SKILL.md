@@ -17,7 +17,7 @@ This skill provides technical domain knowledge for architecting, coordinating, i
 **Activate when tasks involve:**
 - Architecting or reviewing single-agent, sequential, parallel, conditional, or supervisor-based multi-agent workflows.
 - Enforcing Clean Architecture graph package shapes (`agents/graphs/[feature]/`) and dependency boundaries.
-- Bridging LangGraph tools to the Application layer (`application/features/`) without bypassing business logic or handlers.
+- Bridging LangGraph tools to the Application layer (`application/features/`) without bypassing business logic.
 - Abstracting LLM model clients behind provider factories (`agents/llm/`) and centralizing configuration.
 - Enforcing orchestration guardrails: recursion limits, execution timeouts, token budgets, and handoff contracts.
 - Handling partial failures, branch error aggregation, and evidence traceability in final responses.
@@ -48,7 +48,6 @@ flowchart LR
         Persist["Persistence -> Checkpointer Storage Engines"]
         Tools["Tools Runtime -> Execution Sandboxes"]
         HITL["Human-in-the-Loop -> Interrupt Mechanics"]
-        Stream["Streaming -> SSE/gRPC Stream Wire Protocols"]
     end
 
     InScope -.-> Boundaries
@@ -56,15 +55,22 @@ flowchart LR
 
 ---
 
-## 3. Reference Map
+## 3. Orchestration Rules & Checklist
 
-| Sub-Task | Reference Document | Focus Areas |
+| ID | Rule Name | Objective |
 |---|---|---|
-| **Package Architecture** | [`references/graph-package-architecture.md`](references/graph-package-architecture.md) | Canonical `agents/` layout, seam service (`agents/services/`), dependency boundary rules, naming rules, structural invariants. |
-| **Topologies & Coordination** | [`references/agent-topologies-and-coordination.md`](references/agent-topologies-and-coordination.md) | Single-agent, sequential, parallel (fan-out/fan-in), conditional, supervisor delegation, handoffs, failure handling. |
-| **Tool-to-App Bridging** | [`references/application-layer-tool-bridging.md`](references/application-layer-tool-bridging.md) | Thin tool adapters, handler DI reuse, forbidding direct DB/infrastructure access, missing capability gaps. |
-| **Model Abstraction** | [`references/model-provider-abstraction.md`](references/model-provider-abstraction.md) | `BaseChatModel` interfaces, provider factory (`infrastructure/` vs `agents/llm/`), secrets safety, test doubles (`FakeListChatModel`). |
-| **Testing & Guardrails** | [`references/orchestration-testing-and-guardrails.md`](references/orchestration-testing-and-guardrails.md) | `recursion_limit`, timeout envelopes, token counters, handoff validation, partial failure aggregation, evidence integrity. |
+| `ORCH01` | Canonical Package Layout | Ensure graph packages follow clean separation of concerns and layered folder conventions. |
+| `ORCH02` | Seam Service Isolation | Ensure entry points invoke graphs through dedicated seam services, not raw graph instances. |
+| `ORCH03` | Dependency Boundary Rules | Enforce strict inward dependency directions; forbid domain/application from importing `agents/`. |
+| `ORCH04` | Tool-to-Application Bridging | Ensure tools act as thin adapters delegating to Application handlers; forbid direct DB/infra access. |
+| `ORCH05` | Model Provider Abstraction | Abstract LLM clients behind provider factories or `BaseChatModel` interfaces with safe secrets. |
+| `ORCH06` | Orchestration Guardrails | Enforce runtime guardrails: `recursion_limit`, timeout envelopes, token counters, and concurrency bounds. |
+| `ORCH07` | Topology Proportionality | Use explicit edges for deterministic flows; reserve LLM supervisor routers for dynamic routing. |
+| `ORCH08` | Handoff Contract Validation | Validate cross-agent state transfers and inter-agent handoff payloads with explicit schemas. |
+| `ORCH09` | Partial Failure Aggregation | Handle branch errors gracefully in fan-out/fan-in topologies without losing failure traceability. |
+| `ORCH10` | Deterministic Testing | Test agent graph orchestration deterministically using test doubles (`FakeListChatModel`). |
+
+*Detailed criteria, evidence patterns, and remediation per rule are defined in [`references/checklist.md`](references/checklist.md).*
 
 ---
 
@@ -72,16 +78,12 @@ flowchart LR
 
 When designing, implementing, or reviewing agent orchestration, follow these guidelines:
 
-- **Specification-Driven:** Treat the supplied feature specification and established project contracts as the source of truth for required behavior. Do not invent business requirements, tool capabilities, or fallback behavior. If requirements conflict or are incomplete, document the gap.
-- **Dependency Boundary Rules:** In repositories that adopt the canonical Clean Architecture graph layout, enforce directional dependency rules and associated structural invariants. In external repositories, assess equivalent dependency boundaries and separation of concerns without forcing canonical folder names or package structures.
-- **Supervisor vs. Fixed Topologies:** Choose the simplest topology that satisfies the specification. Use explicit edges for deterministic sequential flows, parallel fan-out/fan-in where work is independent, and conditional routing where decisions are required. Add a supervisor or LLM-based router only when its dynamic decision-making capability is needed.
-- **Tools as Thin Adapters:** Tools should delegate business operations to existing Application-layer handlers. They must not bypass those handlers through direct database sessions, infrastructure access, or duplicated business logic. If a required capability has no suitable handler, report an Application capability gap.
-- **Typed Contracts:** Validate external inputs and meaningful inter-agent handoff payloads against explicit contracts. Follow the project's state schema and reducer conventions for ordinary graph-state updates; do not require a separate Pydantic model for every state update or edge.
-- **Guardrails Are Enforced Mechanisms:** Comments and docstrings do not establish enforcement. Verify that configured recursion limits, timeouts, budget controls, concurrency bounds, and retry limits are applied to the actual execution path.
-- **Failure and Aggregation Semantics:** Distinguish recoverable failures, terminal failures, and partial results. Retries must be bounded and appropriate for the operation. Aggregation must validate branch results and preserve failure information required by the specification.
-- **Evidence and False Positives:** Report confirmed defects with concrete file and line evidence. Do not infer a violation solely from naming, directory structure in an external repository, or the absence of a preferred implementation pattern. Record uncertainty when the evidence is insufficient.
-- **Consolidate Root Causes:** Report symptoms of the same underlying defect as one finding when they share a root cause and remediation. Keep independently actionable defects separate.
-- **Version and Project Compatibility:** Inspect declared and installed LangGraph versions, relevant dependency constraints, and existing project conventions before recommending APIs or code changes. Do not assume that examples from another version are directly compatible.
+- **Specification-Driven:** Treat the supplied feature specification as the source of truth. Do not invent business requirements or tool capabilities.
+- **Dependency Boundary Rules:** Enforce directional dependency rules. In external repositories, assess equivalent separation of concerns without forcing exact folder names.
+- **Supervisor vs. Fixed Topologies:** Choose the simplest topology that satisfies the specification. Use explicit edges for deterministic flows.
+- **Tools as Thin Adapters:** Tools must delegate business operations to Application-layer handlers and never execute direct DB sessions.
+- **Guardrails Are Enforced Mechanisms:** Ensure configured recursion limits and timeouts are actively passed to graph execution.
+- **Evidence-Based Review:** Report confirmed defects with concrete file and line evidence. Record uncertainty when evidence is insufficient.
 
 ---
 
@@ -90,9 +92,17 @@ When designing, implementing, or reviewing agent orchestration, follow these gui
 This skill supplies orchestration domain expertise and delegates finding classification, scoring, and blocking to standard Engineering Skills:
 1. **Identify Architectural/Orchestration Defect**: Pinpoint the concrete defect with line and file evidence.
 2. **Map to Applicable Engineering Dimension**:
-   - **Modularity** ([`skill-eng-modularity`](../../engineering/skill-eng-modularity/SKILL.md)): Layer separation violations, tool-to-infrastructure leakage, bypassed application layer, circular graph dependencies.
-   - **Maintainability** ([`skill-eng-maintainability`](../../engineering/skill-eng-maintainability/SKILL.md)): Untyped handoffs, hardcoded provider configurations, tangled supervisor logic.
-   - **Performance** ([`skill-eng-performance`](../../engineering/skill-eng-performance/SKILL.md)): Missing `recursion_limit`, missing execution timeouts, serial execution of independent agent tasks.
-   - **Security** ([`skill-eng-security`](../../engineering/skill-eng-security/SKILL.md)): Hardcoded API keys, state leaking unvetted user payloads, unvalidated tool inputs.
-   - **Business Logic** ([`skill-eng-business-logic`](../../engineering/skill-eng-business-logic/SKILL.md)): Fabricated tool outputs, lost branch aggregation, supervisor routing contradicting specification.
+   - **Modularity** ([`skill-eng-modularity`](../../engineering/skill-eng-modularity/SKILL.md)): Layer separation violations, tool-to-infrastructure leakage.
+   - **Maintainability** ([`skill-eng-maintainability`](../../engineering/skill-eng-maintainability/SKILL.md)): Untyped handoffs, hardcoded provider configurations.
+   - **Performance** ([`skill-eng-performance`](../../engineering/skill-eng-performance/SKILL.md)): Missing `recursion_limit`, missing execution timeouts.
+   - **Security** ([`skill-eng-security`](../../engineering/skill-eng-security/SKILL.md)): Hardcoded API keys, unvalidated tool inputs.
+   - **Business Logic** ([`skill-eng-business-logic`](../../engineering/skill-eng-business-logic/SKILL.md)): Fabricated tool outputs, lost branch aggregation.
 3. **Delegate Scoring**: Use the platform's native 0–10 scale and Gate policies; never invent local scoring.
+
+---
+
+## 6. Supporting References
+
+- **Inspection Checklist**: [`references/checklist.md`](references/checklist.md) — Detailed criteria, code patterns, detection, and remediation per rule.
+- **Architecture & Patterns**: [`references/architecture-and-patterns.md`](references/architecture-and-patterns.md) — Canonical graph package structure, topologies, and tool bridging.
+- **Validation Suite**: [`validation/test-suite.json`](validation/test-suite.json) — Automated test cases for detection and false-positive verification.

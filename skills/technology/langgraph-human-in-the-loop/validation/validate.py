@@ -17,11 +17,8 @@ TEST_SUITE_SCHEMA = os.path.join(SKILL_DIR, "validation", "test-suite.schema.jso
 TEST_DATA_DIR = os.path.join(SKILL_DIR, "validation", "test-data")
 
 REQUIRED_REFERENCES = [
-    "interrupts-and-resume.md",
-    "approval-workflow-design.md",
-    "checkpointing-and-execution-lifecycle.md",
-    "security-and-authorization.md",
-    "hitl-testing-and-recovery.md"
+    "checklist.md",
+    "architecture-and-patterns.md"
 ]
 
 def strip_comments_and_docstrings(source: str) -> str:
